@@ -558,7 +558,7 @@ public class GenericClassImpl implements Serializable,GenericClass<GenericClassI
     private GenericClass<?> getGenericTypeVariableInstantiation(
             Map<TypeVariable<?>, Type> typeMap, int recursionLevel)
             throws ConstructionFailedException {
-   		if (typeMap.containsKey(type) /*GIO: added:*/ && typeMap.get(type) != type) {
+   		if (typeMap.containsKey(type) /*GIO: added:* / && typeMap.get(type) != type*/) {
             logger.debug("Type contains {}: {}", this, typeMap);
             if(typeMap.get(type) == type) {
                 // FIXXME: How does this happen?
@@ -1096,11 +1096,11 @@ public class GenericClassImpl implements Serializable,GenericClass<GenericClassI
      * @return
      */
     public boolean hasGenericSuperType(GenericClass<?> superType) {
-    	try {	
+    	//try {	
     		return GenericTypeReflector.isSuperType(superType.getType(), type);
-    	} catch (RuntimeException e) {
+    	/*} catch (RuntimeException e) {
     		return false; //GIO: Fix: here we can get a RuntimeException because the library cannot conclude isGenericSuperTypeOf in some cases;
-    	}
+    	}*/
     }
 
     /**
@@ -1110,11 +1110,11 @@ public class GenericClassImpl implements Serializable,GenericClass<GenericClassI
      * @return
      */
     public boolean hasGenericSuperType(Type superType) {
-    	try {
+    	//try {
     		return GenericTypeReflector.isSuperType(superType, type);
-    	} catch (RuntimeException e) {
+    	/*} catch (RuntimeException e) {
     		return false; //GIO: Fix: here we can get a RuntimeException because the library cannot conclude isGenericSuperTypeOf in some cases;
-    	}
+    	}*/
     }
 
     /* (non-Javadoc)
@@ -1302,11 +1302,11 @@ public class GenericClassImpl implements Serializable,GenericClass<GenericClassI
      * @return
      */
     public boolean isGenericSuperTypeOf(GenericClass<?> subType) {
-    	try {
+    	//try {
     		return GenericTypeReflector.isSuperType(type, subType.getType());
-    	} catch (RuntimeException e) {
+    	/*} catch (RuntimeException e) {
     		return false; //GIO: Fix: here we can get a RuntimeException because the library cannot conclude isGenericSuperTypeOf in some cases;
-    	}
+    	}*/
     }
 
     /**
@@ -1316,11 +1316,11 @@ public class GenericClassImpl implements Serializable,GenericClass<GenericClassI
      * @return
      */
     public boolean isGenericSuperTypeOf(Type subType) {
-    	try {
+    	//try {
     		return GenericTypeReflector.isSuperType(type, subType);
-    	} catch (RuntimeException e) {
+    	/*} catch (RuntimeException e) {
     		return false; //GIO: Fix: here we can get a RuntimeException because the library cannot conclude isGenericSuperTypeOf in some cases;
-    	}
+    	}*/
     }
 
     /**
@@ -1432,7 +1432,7 @@ public class GenericClassImpl implements Serializable,GenericClass<GenericClassI
         ownerVariableMap.putAll(typeMap);
         
         //GIO: Fix to avoid infinite loop: I commented and then replaced this part of the algorithm
-        /* 
+        ///* 
 		boolean changed = true;
         while(changed) {
             changed = false;
@@ -1464,9 +1464,9 @@ public class GenericClassImpl implements Serializable,GenericClass<GenericClassI
                     }
                 }
             }
-        }*/
+        }//*/
         //GIO: Fix to avoid infinite loop: This is the new algorithm
-        Set<TypeVariable<?>> todo = new HashSet<>(); 
+        /*Set<TypeVariable<?>> todo = new HashSet<>(); 
 		for (TypeVariable<?> key : ownerVariableMap.keySet()) {
 			todo.clear();
 			TypeVariable<?> var = key;
@@ -1483,7 +1483,7 @@ public class GenericClassImpl implements Serializable,GenericClass<GenericClassI
 			for (TypeVariable<?> updt: todo) {
 				ownerVariableMap.put(updt, val);
 			}
-		}		
+		}*/		
         //GIO: Fix to avoid infinite loop: END
 
         GenericClassImpl concreteClass = new GenericClassImpl(GenericUtils.replaceTypeVariables(type, ownerVariableMap));
