@@ -443,7 +443,7 @@ public class PathConditionCoverageGoal implements Serializable {  /*SUSHI: Path 
 				thePrioritizedColor = aliveColors.stream().filter(stats -> stats.meanReward == topMeanReward).findAny().get().color;
 				double p = Randomness.nextDouble(0.0, 1.0);
 				if (p < eGreedy_epsilon) { //Exploration: choose a different color randomly
-					List<StatsForAColor> theOtherColors = new ArrayList<StatsForAColor>(aliveColors);
+					List<Object> theOtherColors = new ArrayList<StatsForAColor>(aliveColors).stream().map(stats -> stats.color).collect(Collectors.toList());
 					theOtherColors.remove(thePrioritizedColor);
 					thePrioritizedColor = Randomness.choice(theOtherColors);
 					LoggingUtils.getEvoLogger().info("----- EXPLORATION: ");
