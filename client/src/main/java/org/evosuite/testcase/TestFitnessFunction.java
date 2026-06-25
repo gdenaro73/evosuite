@@ -61,13 +61,13 @@ public abstract class TestFitnessFunction
             origResult = runTest(individual.test);
             individual.setLastExecutionResult(origResult);
             individual.setChanged(false);
-        } else if (individual.getFitnessValues().containsKey(this)) { //GIO: Bug fix 21/05/2024
+        } /*else if (individual.getFitnessValues().containsKey(this)) { //GIO: Bug fix 21/05/2024
         	/* if there is a cached value, that should be preferred (as it could be set on purpose, 
         	 * and could be different than the value originally extracted from origResult. E.g., see 
         	 * MultiCritriaManage.computeFitness() 
-        	 * in the case of origResult.hasTimeout() || origResult.hasTestException() */
+        	 * in the case of origResult.hasTimeout() || origResult.hasTestException() * /
         	return individual.getFitnessValues().get(this);
-        }
+        }*/
 
         double fitness = getFitness(individual, origResult);
         updateIndividual(individual, fitness);
