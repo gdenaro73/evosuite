@@ -14,6 +14,8 @@ import org.evosuite.Properties;
 import org.evosuite.coverage.branch.Branch;
 import org.evosuite.coverage.branch.BranchCoverageTestFitness;
 import org.evosuite.coverage.pathcondition.ApcGoalFitness;
+import org.evosuite.coverage.pathcondition.PathConditionCoverageGoal;
+import org.evosuite.coverage.pathcondition.PathConditionCoverageGoal.PcFitnessValue;
 import org.evosuite.ga.metaheuristics.mosa.structural.AidingPathConditionManager.ApcGroup;
 import org.evosuite.testcase.TestChromosome;
 import org.evosuite.testcase.TestFitnessFunction;
@@ -93,9 +95,10 @@ public class JBSEManager {
 		}
 
 		@Override
-		public void passedPathCondition(int pathConditionId, int relatedBranchId, double distance, ArrayList<Object> feedback) { /*SUSHI: Path condition fitness*/
-			stack.add(new PathConditionPassedEvent(pathConditionId, distance));
-			super.passedPathCondition(pathConditionId, relatedBranchId, distance, feedback);			
+		public void passedPathCondition(PathConditionCoverageGoal pathConditionGoal, int relatedBranchId, PcFitnessValue fitnessData, ArrayList<Object> feedback) { /*SUSHI: Path condition fitness*/
+			//TODO: Check for compatibility with colored path conditions
+			stack.add(new PathConditionPassedEvent(pathConditionGoal.getPathConditionId(), fitnessData.value()));
+			super.passedPathCondition(pathConditionGoal, relatedBranchId, fitnessData, feedback);			
 		}
 		
 		@Override

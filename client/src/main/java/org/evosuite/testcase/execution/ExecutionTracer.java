@@ -35,6 +35,7 @@ import org.evosuite.coverage.dataflow.DefUsePool;
 import org.evosuite.coverage.dataflow.Definition;
 import org.evosuite.coverage.dataflow.Use;
 import org.evosuite.coverage.pathcondition.PathConditionCoverageGoal;
+import org.evosuite.coverage.pathcondition.PathConditionCoverageGoal.PcFitnessValue;
 import org.evosuite.coverage.seepep.SeepepTraceItem;
 import org.evosuite.instrumentation.testability.BooleanHelper;
 import org.evosuite.seeding.ConstantPoolManager;
@@ -855,14 +856,13 @@ public class ExecutionTracer {
 				params[params.length - 1] = feedback;
 			}
 			for (PathConditionCoverageGoal goal : methodEvaluators) {
-				Object evaluator = goal.getEvaluator();
-				Method evaluatorMethod = getEvaluatorMethod(evaluator, "test0", goal, className, methodName);
-				double d = executeEvaluator(evaluator, evaluatorMethod, params, className, methodName);
+				PcFitnessValue fitnessData = goal.executeEvaluator(params);
 				int relatedBranchId = -1;
-				if (tracer.pathConditionRelatedBranch.containsKey(goal.getPathConditionId())) {
-					relatedBranchId = tracer.pathConditionRelatedBranch.get(goal.getPathConditionId());
+				if (tracer.pathConditionRelatedBranch.containsKey(goal)) {
+					relatedBranchId = tracer.pathConditionRelatedBranch.get(goal);
 				}
-				tracer.trace.passedPathCondition(goal.getPathConditionId(), relatedBranchId, d, feedback == null ? null : (ArrayList<Object>) feedback.clone()); //need to clone the ArrayList, because we clean and reuse feedback (below)
+				tracer.trace.passedPathCondition(goal, relatedBranchId, fitnessData,
+						feedback == null ? null : (ArrayList<Object>) feedback.clone()); //need to clone the ArrayList, because we clean and reuse feedback (below)
 				if (feedback != null) {
 					feedback.clear();
 				}
@@ -990,16 +990,13 @@ public class ExecutionTracer {
 			resetEvaluationBackbone(cl);
 
 			for (PathConditionCoverageGoal goal : methodEvaluators) {
-				Object evaluator = goal.getEvaluator();
-				Method evaluatorMethod = getEvaluatorMethod(evaluator, "test1", goal, className, methodName);
-
-				Object [] paramValues = new Object[evaluatorMethod.getParameterCount()]; //expected equal to (params.length + 1)
+				Object [] paramValues = new Object[params.length + 1]; //expected equal to (params.length + 1)
 				paramValues[0] = retVal;
 				for (int i = 0; i < params.length; i++) {
 					paramValues[i + 1] = params[i];
 				}
-				double d = executeEvaluator(evaluator, evaluatorMethod, paramValues, className, methodName);
-				tracer.trace.passedPostCondition(goal.getPathConditionId(), d);
+				double d = goal.executeEvaluatorLegacy("test1", paramValues);
+				tracer.trace.passedPostCondition(goal, goal.wrapDistanceValueAsPcFitnessValue(d));
 				//LoggingUtils.getEvoLogger().info("    * Evaluator test1 on:{} = {} (params = {}, goal = {})", goal.getPathConditionId(), d, Arrays.toString(params), goal);
 			}
 		} catch (Throwable e) {
@@ -1009,7 +1006,6 @@ public class ExecutionTracer {
 		}
 	}
 	
-
 	private static boolean reentrantCall(ExecutionTrace trace) {
 		return trace.isEvaluatingPathConditions();
 		/*
@@ -1117,79 +1113,10 @@ public class ExecutionTracer {
 		}		
 	}
 
-	private static double executeEvaluator(Object evaluator, Method evaluatorMethod, Object[] paramValues, String targetClassName, String targetMethodName) {
-		//execute the evaluator
-		double d = Double.MAX_VALUE;
-		try {
-			d = (double) evaluatorMethod.invoke(evaluator, paramValues);
-			//LoggingUtils.getEvoLogger().info("**computed d: " + d + ", " + evaluatorMethod + ", pc = " + evaluator.toString());
-		} catch (IllegalAccessException | IllegalArgumentException e) {
-			//throw new EvosuiteError
-			LoggingUtils.getEvoLogger().info("Cannot execute path condition evaluator: " + evaluatorMethod
-			+ "\n\t path condition for method " + targetClassName + "." + targetMethodName
-			+ "\n\t called on objects " + Arrays.toString(paramValues)
-			+ "\n\t failed because of: " + e
-					);
-		} catch (InvocationTargetException e) {
-			StackTraceElement[] st = e.getCause().getStackTrace();
-			LoggingUtils.getEvoLogger().info("Exception thrown within path condition evaluator: " + evaluatorMethod
-			+ "\n\t path condition for method " + targetClassName + "." + targetMethodName
-			+ "\n\t called on objects " + Arrays.toString(paramValues)
-			+ "\n\t failed because of: " + e.getCause()
-			+ "\n\t stack trace is " + st.length + " items long: " + 
-			(st.length <= 50 ? Arrays.toString(st) :
-				Arrays.toString(Arrays.copyOfRange(st, 0, 25)) + 
-				" ...... " +  Arrays.toString(Arrays.copyOfRange(st, st.length - 25, st.length))));
-		} catch (Throwable e) {
-			StackTraceElement[] st = e.getCause().getStackTrace();
-			throw new EvosuiteError("Unexpected failure when executing path condition evaluator: " + evaluatorMethod
-			+ "\n\t path condition for method " + targetClassName + "." + targetMethodName
-			+ "\n\t called on objects " + Arrays.toString(paramValues)
-			+ "\n\t failed because of: " + e.getCause()
-			+ "\n\t stack trace is " + st.length + " items long: " + 
-			(st.length <= 50 ? Arrays.toString(st) :
-				Arrays.toString(Arrays.copyOfRange(st, 0, 25)) + 
-				" ...... " +  Arrays.toString(Arrays.copyOfRange(st, st.length - 25, st.length))));
-		}
-		return d;
-	}
-
-	private static Method getEvaluatorMethod(Object evaluator, String methodName, PathConditionCoverageGoal targetGoal, String targetClassName, String targetMethodName) {
-		Method evaluatorMethod = null;
-		try {
-			Method[] methods = evaluator.getClass().getDeclaredMethods();
-			for (Method m : methods) {
-				if (m.getName().startsWith(methodName)) {
-					evaluatorMethod = m;
-					break;
-				}
-			}
-		} catch (Throwable e) { 
-			throw new EvosuiteError("Cannot execute path condition evaluator: " + targetGoal.getEvaluatorName() +
-					"\n\t path condition for method " + targetClassName + "." + targetMethodName +
-					"\n\t due to: " + e);
-		}
-		
-		if (evaluatorMethod == null) {
-			throw new EvosuiteError("Cannot execute path condition evaluator: " + targetGoal.getEvaluatorName() +
-					"\n\t path condition for method " + targetClassName + "." + targetMethodName +
-					"\n\t because there is no 'test0' method in the evaluator");
-		}
-		return evaluatorMethod;
-	}
-	
 	private Map<String, Map<String, List<PathConditionCoverageGoal>>> pathConditions = new HashMap<>(); //classname --> methodname --> PathCondWrapper /*SUSHI: Path condition fitness*/
-	private Map<Integer, Integer> pathConditionRelatedBranch =  new HashMap<>(); //pcId --> branchId
+	private Map<PathConditionCoverageGoal, Integer> pathConditionRelatedBranch =  new HashMap<>(); //pc --> branchId
 	public static void addEvaluatorForPathCondition(PathConditionCoverageGoal g) { /*SUSHI: Path condition fitness*/
 		ExecutionTracer tracer = getExecutionTracer();
-		Object evaluator = g.getEvaluator();
-		try {
-			Method toString = evaluator.getClass().getDeclaredMethod("toString", new Class[]{});
-			String customDescription = (String) toString.invoke(evaluator, (Object[]) null);
-			g.setCustomDescription(customDescription);
-		} catch (NoSuchMethodException | SecurityException | IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
-			//no custom description could be loaded
-		}
 		Map<String, List<PathConditionCoverageGoal>> classEvaluators = tracer.pathConditions.get(g.getClassName());
 		if (classEvaluators == null) {
 			classEvaluators = new HashMap<String, List<PathConditionCoverageGoal>>();
@@ -1206,7 +1133,7 @@ public class ExecutionTracer {
 	public static void addEvaluatorForPathCondition(PathConditionCoverageGoal g, BranchCoverageTestFitness relatedBracnhGoal) { /*SUSHI: Path condition fitness*/
 		addEvaluatorForPathCondition(g);
 		if (relatedBracnhGoal.getBranch() != null) {
-			getExecutionTracer().pathConditionRelatedBranch.put(g.getPathConditionId(), relatedBracnhGoal.getBranch().getActualBranchId());
+			getExecutionTracer().pathConditionRelatedBranch.put(g, relatedBracnhGoal.getBranch().getActualBranchId());
 		}
 	}
 	

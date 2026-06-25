@@ -29,6 +29,8 @@ import org.evosuite.coverage.dataflow.DefUse;
 import org.evosuite.coverage.dataflow.DefUsePool;
 import org.evosuite.coverage.dataflow.Definition;
 import org.evosuite.coverage.dataflow.Use;
+import org.evosuite.coverage.pathcondition.PathConditionCoverageGoal;
+import org.evosuite.coverage.pathcondition.PathConditionCoverageGoal.PcFitnessValue;
 import org.evosuite.coverage.seepep.SeepepTraceItem;
 import org.evosuite.coverage.seepep.SparkMethodSignatures;
 import org.evosuite.setup.CallContext;
@@ -286,10 +288,10 @@ public class ExecutionTraceImpl implements ExecutionTrace, Cloneable {
 
 	private final Map<Integer, Double> trueDistancesSum = Collections.synchronizedMap(new HashMap<>());
 
-	public Map<Integer, Double> pathConditionDistances = Collections.synchronizedMap(new HashMap<>());/*SUSHI: Path condition fitness*/
-	public Map<Integer, ArrayList<Object>> pathConditionFeedbacks = Collections.synchronizedMap(new HashMap<>());/*SUSHI: Path condition fitness*/
-	public Map<Integer /*branchId*/, Set<Integer> /*related pcIds*/> pathConditionBranchRelations = Collections.synchronizedMap(new HashMap<>());/*SUSHI: Path condition fitness*/
-	public Map<Integer, Double> pathConditionRelatedBranchDistance = Collections.synchronizedMap(new HashMap<>());/*SUSHI: Path condition fitness*/
+	public Map<PathConditionCoverageGoal, PcFitnessValue> pathConditionFitnessData = Collections.synchronizedMap(new HashMap<>());/*SUSHI: Path condition fitness*/
+	public Map<PathConditionCoverageGoal, ArrayList<Object>> pathConditionFeedbacks = Collections.synchronizedMap(new HashMap<>());/*SUSHI: Path condition fitness*/
+	public Map<Integer /*branchId*/, Set<PathConditionCoverageGoal> /*related PCs*/> pathConditionBranchRelations = Collections.synchronizedMap(new HashMap<>());/*SUSHI: Path condition fitness*/
+	public Map<PathConditionCoverageGoal, Double> pathConditionRelatedBranchDistance = Collections.synchronizedMap(new HashMap<>());/*SUSHI: Path condition fitness*/
 	private class methodInfo {
 		String className;
 		String methodNameAndDescription;
@@ -531,14 +533,14 @@ public class ExecutionTraceImpl implements ExecutionTrace, Cloneable {
 			/* Here we shall track the currendDistance as the distance from the uncovered side of the branch.
 			 * If (conversely) the branch is covered, we let the fitness function bes responsible of computing the fitness as 0. */
 			double currentDistance = Math.max(true_distance, false_distance);
-			for (int pathConditionId: pathConditionBranchRelations.get(branch)) {
+			for (PathConditionCoverageGoal pathCondition: pathConditionBranchRelations.get(branch)) {
 				synchronized (pathConditionRelatedBranchDistance) {
-					Double latestDistance = pathConditionRelatedBranchDistance.get(pathConditionId);
+					Double latestDistance = pathConditionRelatedBranchDistance.get(pathCondition);
 					if (latestDistance == null) {
 						latestDistance = Double.MAX_VALUE;
 					}
 					if (currentDistance < latestDistance) {
-						pathConditionRelatedBranchDistance.put(pathConditionId, currentDistance);
+						pathConditionRelatedBranchDistance.put(pathCondition, currentDistance);
 					}
 				}
 			}
@@ -2038,14 +2040,14 @@ public class ExecutionTraceImpl implements ExecutionTrace, Cloneable {
 	public static class PathConditionEvaluationInfo { /*SUSHI: Path condition fitness*/
 		final String className;
 		final String methodName;
-		final Map<Integer, Double> distances;
+		final Map<PathConditionCoverageGoal, PcFitnessValue> fitnessDataPoints;
 		public PathConditionEvaluationInfo(String className, String methodName) {
 			this.className = className;
 			this.methodName = methodName;
-			this.distances = Collections.synchronizedMap(new HashMap<Integer, Double>());
+			this.fitnessDataPoints = Collections.synchronizedMap(new HashMap<PathConditionCoverageGoal, PcFitnessValue>());
 		}
 		public String toString() { //for debugging purpose
-			return className + "." + methodName + "::" + distances;
+			return className + "." + methodName + "::" + fitnessDataPoints;
 		}
 	}
 
@@ -2093,10 +2095,10 @@ public class ExecutionTraceImpl implements ExecutionTrace, Cloneable {
 	}
 
 	@Override
-	public void passedPathCondition(int pathConditionId, int relatedBranchId, double distance, ArrayList<Object> feedback) { /*SUSHI: Path condition fitness*/
+	public void passedPathCondition(PathConditionCoverageGoal pathConditionGoal, int relatedBranchId, PcFitnessValue fitnessData, ArrayList<Object> feedback) { /*SUSHI: Path condition fitness*/
 		//LoggingUtils.getEvoLogger().info("--path condition distance is d: " + distance + ", pc = " + pathConditionID);
 		if (Properties.POST_CONDITION_CHECK) {
-			pathConditionEvaluationStack.get(0).distances.put(pathConditionId, distance);
+			pathConditionEvaluationStack.get(0).fitnessDataPoints.put(pathConditionGoal, fitnessData);
 			return;
 		}
 		if (trackBranchToPathConditionRelations) {
@@ -2105,21 +2107,22 @@ public class ExecutionTraceImpl implements ExecutionTrace, Cloneable {
 					pathConditionBranchRelations.put(relatedBranchId, new HashSet<>());
 				}
 			}
-			pathConditionBranchRelations.get(relatedBranchId).add(pathConditionId); //set the relation, if not done yet
+			pathConditionBranchRelations.get(relatedBranchId).add(pathConditionGoal); //set the relation, if not done yet
 		}
-		synchronized (pathConditionDistances) {
-			Double currentDistance = pathConditionDistances.get(pathConditionId);
-			if (currentDistance == null
-					|| (Properties.PATH_CONDITION_TARGET == PathConditionTarget.BEST && distance <= distance)
+		synchronized (pathConditionFitnessData) {
+			PcFitnessValue availableFitnessData = pathConditionFitnessData.get(pathConditionGoal);
+			if (availableFitnessData == null
+					|| (Properties.PATH_CONDITION_TARGET == PathConditionTarget.BEST &&
+					fitnessData.value() <= availableFitnessData.value())
 					|| Properties.PATH_CONDITION_TARGET == PathConditionTarget.LAST_ONLY
 					/* else PathConditionTarget.FIRST_ONLY, we keep the first measured value */
 					) {
-				pathConditionDistances.put(pathConditionId, distance);
+				pathConditionFitnessData.put(pathConditionGoal, fitnessData);
 				if (feedback != null) {
-					pathConditionFeedbacks.put(pathConditionId, feedback);
+					pathConditionFeedbacks.put(pathConditionGoal, feedback);
 				}
 				if (trackBranchToPathConditionRelations) {
-					pathConditionRelatedBranchDistance.remove(pathConditionId); //as we are now measuring for a new path-condition, the corresponding branch is to be met yet 
+					pathConditionRelatedBranchDistance.remove(pathConditionGoal); //as we are now measuring for a new path-condition, the corresponding branch is to be met yet 
 				}
 			}
 		}
@@ -2154,17 +2157,24 @@ public class ExecutionTraceImpl implements ExecutionTrace, Cloneable {
 	}
 
 	@Override
-	public void passedPostCondition(int pathConditionID, double distance) { /*SUSHI: Path condition fitness*/
+	public void passedPostCondition(PathConditionCoverageGoal pathConditionGoal, PcFitnessValue fitnessData) { /*SUSHI: Path condition fitness*/
 		//LoggingUtils.getEvoLogger().info("--post condition distance is d: " + distance + ", pc = " + pathConditionID);
-		Double tempDistance = pathConditionEvaluationStack.get(0).distances.get(pathConditionID);
-		if (tempDistance == null) {
+		if (fitnessData.isFitnessWithColor()) {
+			LoggingUtils.getEvoLogger().info("*** WARNING: Post-condition fitness is likely broken when handling path conditions with color, like pc = " + pathConditionGoal);
+			LoggingUtils.getEvoLogger().info("*** CHECK THE RESULTS CAREFULLY");
+		}
+		PcFitnessValue tempFitnessData = pathConditionEvaluationStack.get(0).fitnessDataPoints.get(pathConditionGoal);
+		if (tempFitnessData == null) {
 			throw new EvosuiteError("Unexpected sequence when evaluating post-condition, "
 					+ "since there is no temporarily stored distance for the precodition that "
-					+ "relates to path condition with id = " + pathConditionID);
-		} else if (tempDistance < 0) {
+					+ "relates to path condition with id = " + pathConditionGoal.getPathConditionId());
+		}
+		double tempDistance = tempFitnessData.value();
+		double distance = fitnessData.value();
+		if (tempDistance < 0) {
 			throw new EvosuiteError("Unexpected negative distance (" + tempDistance + ") "
 					+ "when evaluating the post-condition that "
-					+ "relates to path condition with id = " + pathConditionID);
+					+ "relates to path condition with id = " + pathConditionGoal.getPathConditionId());
 			
 		} else if (tempDistance > 0) {
 			distance = tempDistance + 1d; //the precondition did not converge yet, thus we add the maximum 1 as post-condition distance
@@ -2173,16 +2183,16 @@ public class ExecutionTraceImpl implements ExecutionTrace, Cloneable {
 		}
 		//LoggingUtils.getEvoLogger().info("    ** Evaluator post on:{} = {} --> {}", pathConditionID, tempDistance, distance);	
 		
-		synchronized (pathConditionDistances) {
-			Double currentDistance = pathConditionDistances.get(pathConditionID);
-			if (currentDistance == null) {
-				pathConditionDistances.put(pathConditionID, distance);
+		synchronized (pathConditionFitnessData) {
+			PcFitnessValue currentFitnessData = pathConditionFitnessData.get(pathConditionGoal);
+			if (currentFitnessData == null) {
+				pathConditionFitnessData.put(pathConditionGoal, pathConditionGoal.wrapDistanceValueAsPcFitnessValue(distance));
 			} else if (Properties.PATH_CONDITION_TARGET != PathConditionTarget.FIRST_ONLY) {				
 				if (Properties.PATH_CONDITION_TARGET == PathConditionTarget.BEST) {
-					distance = Math.min(currentDistance, distance);
+					distance = Math.min(currentFitnessData.value(), distance);
 				} /* else PathConditionTarget.LAST_ONLY, meaning that the new value must replace the old one*/
 				
-				pathConditionDistances.put(pathConditionID, distance);			
+				pathConditionFitnessData.put(pathConditionGoal, pathConditionGoal.wrapDistanceValueAsPcFitnessValue(distance));			
 			} /* else PathConditionTarget.FIRST_ONLY, we keep the first measured value */
 		}
 	}
@@ -2216,17 +2226,17 @@ public class ExecutionTraceImpl implements ExecutionTrace, Cloneable {
 	}
 
 	@Override
-	public Map<Integer, Double> getPathConditionDistances() { /*SUSHI: Path condition fitness*/
-		return pathConditionDistances;
+	public Map<PathConditionCoverageGoal, PcFitnessValue> getPathConditionFitnessData() { /*SUSHI: Path condition fitness*/
+		return pathConditionFitnessData;
 	}
 	
 	@Override
-	public Map<Integer, ArrayList<Object>> getPathConditionFeedbacks() { /*SUSHI: Path condition fitness*/
+	public Map<PathConditionCoverageGoal, ArrayList<Object>> getPathConditionFeedbacks() { /*SUSHI: Path condition fitness*/
 		return pathConditionFeedbacks;
 	}
 	
 	@Override
-	public Map<Integer, Double> getPathConditionRelatedBranchDistance() { /*SUSHI: Path condition fitness*/
+	public Map<PathConditionCoverageGoal, Double> getPathConditionRelatedBranchDistance() { /*SUSHI: Path condition fitness*/
 		return pathConditionRelatedBranchDistance;
 	}
 

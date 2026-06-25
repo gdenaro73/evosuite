@@ -400,6 +400,13 @@ public class PathConditionManager extends MultiCriteriaManager implements Search
 		if (Properties.DISMISS_PATH_CONDITIONS_NO_IMPROVE_ITERATIONS > 0) {
 			checkForPathConditionGoalsToDismiss(algorithm.getAge());
 		}
+		
+		for (TestFitnessFunction goal : this.getUncoveredGoals()){
+			if (goal instanceof PathConditionCoverageGoalFitness) {
+				((PathConditionCoverageGoalFitness) goal).getPathConditionGoal().iteration(); /* To update MBA statistics when using colored fitness */
+			}
+		}
+
 	}
 
 	private void checkForPathConditionGoalsToDismiss(int currentIteration) {

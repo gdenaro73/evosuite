@@ -21,6 +21,8 @@
 package org.evosuite.testcase.execution;
 
 import org.evosuite.coverage.dataflow.DefUse;
+import org.evosuite.coverage.pathcondition.PathConditionCoverageGoal;
+import org.evosuite.coverage.pathcondition.PathConditionCoverageGoal.PcFitnessValue;
 import org.evosuite.setup.CallContext;
 import org.evosuite.testcase.execution.ExecutionTraceImpl.BranchEval;
 import org.evosuite.testcase.execution.ExecutionTraceImpl.PathConditionEvaluationInfo;
@@ -871,15 +873,15 @@ public class ExecutionTraceProxy implements ExecutionTrace, Cloneable {
 	}
 
 	@Override
-	public void passedPathCondition(int pathConditionID, int relatedBranchId, double distance, ArrayList<Object> feedback) { /*SUSHI: Path condition fitness*/
+	public void passedPathCondition(PathConditionCoverageGoal pathCondition, int relatedBranchId, PcFitnessValue fitnessData, ArrayList<Object> feedback) { /*SUSHI: Path condition fitness*/
 		copyOnWrite();
-		trace.passedPathCondition(pathConditionID, relatedBranchId, distance, feedback);		
+		trace.passedPathCondition(pathCondition, relatedBranchId, fitnessData, feedback);		
 	}
 
 	@Override
-	public void passedPostCondition(int pathConditionID, double distance) { /*SUSHI: Path condition fitness*/
+	public void passedPostCondition(PathConditionCoverageGoal pathCondition, PcFitnessValue fitnessData) { /*SUSHI: Path condition fitness*/
 		copyOnWrite();
-		trace.passedPostCondition(pathConditionID, distance);		
+		trace.passedPostCondition(pathCondition, fitnessData);		
 	}
 
 	@Override
@@ -922,17 +924,17 @@ public class ExecutionTraceProxy implements ExecutionTrace, Cloneable {
 	}
 
 	@Override
-	public Map<Integer, Double> getPathConditionDistances() { /*SUSHI: Path condition fitness*/
-		return trace.getPathConditionDistances();
+	public Map<PathConditionCoverageGoal, PcFitnessValue> getPathConditionFitnessData() { /*SUSHI: Path condition fitness*/
+		return trace.getPathConditionFitnessData();
 	}
 
 	@Override
-	public Map<Integer, ArrayList<Object>> getPathConditionFeedbacks() { /*SUSHI: Path condition fitness*/
+	public Map<PathConditionCoverageGoal, ArrayList<Object>> getPathConditionFeedbacks() { /*SUSHI: Path condition fitness*/
 		return trace.getPathConditionFeedbacks();
 	}
 
 	@Override
-	public Map<Integer, Double> getPathConditionRelatedBranchDistance() { /*SUSHI: Path condition fitness*/
+	public Map<PathConditionCoverageGoal, Double> getPathConditionRelatedBranchDistance() { /*SUSHI: Path condition fitness*/
 		return trace.getPathConditionRelatedBranchDistance();
 	}
 

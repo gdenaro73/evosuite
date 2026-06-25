@@ -1586,7 +1586,7 @@ public class Properties {
 
 	/** Constant <code>PATH_CONDITION_TARGET=""</code> */
 	@Parameter(key = "path_condition_target", group = "SUSHI", description = "When using path condition fitness, the fitness of a test case is measured only with reference to first/last/best time that the test case calls the target method. If set to best (default), the fitness corresponds to the minimum fitness measured across all calls in the test case.")
-	public static PathConditionTarget PATH_CONDITION_TARGET = PathConditionTarget.BEST; /*SUSHI: Path condition fitness*/
+	public static PathConditionTarget PATH_CONDITION_TARGET = PathConditionTarget.LAST_ONLY; /*SUSHI: Path condition fitness*/
 
 	public enum PathConditionTarget {BEST, FIRST_ONLY, LAST_ONLY} /*SUSHI: Path condition fitness*/
 

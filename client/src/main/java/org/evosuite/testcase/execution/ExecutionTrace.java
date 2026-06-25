@@ -21,6 +21,8 @@
 package org.evosuite.testcase.execution;
 
 import org.evosuite.coverage.dataflow.DefUse;
+import org.evosuite.coverage.pathcondition.PathConditionCoverageGoal;
+import org.evosuite.coverage.pathcondition.PathConditionCoverageGoal.PcFitnessValue;
 import org.evosuite.coverage.seepep.SeepepTraceItem;
 import org.evosuite.setup.CallContext;
 import org.evosuite.testcase.execution.ExecutionTraceImpl.BranchEval;
@@ -595,8 +597,8 @@ public interface ExecutionTrace {
 	 * @param distance
 	 *            the distance of the current trace from satisfying the path condition.
 	 */
-	public void passedPathCondition(int pathConditionID, int relatedBranchId, double distance, ArrayList<Object> feedback); /*SUSHI: Path condition fitness*/
-	public void passedPostCondition(int pathConditionID, double distance); /*SUSHI: Path condition fitness*/
+	public void passedPathCondition(PathConditionCoverageGoal pathCondition, int relatedBranchId, PcFitnessValue fitnessData, ArrayList<Object> feedback); /*SUSHI: Path condition fitness*/
+	public void passedPostCondition(PathConditionCoverageGoal pathCondition, PcFitnessValue fitnessData); /*SUSHI: Path condition fitness*/
 	void evaluatingPathConditionsBegin(String className, String methodName); /*SUSHI: Path condition fitness*/
 	void evaluatingPathConditionsDone(String className, String methodName); /*SUSHI: Path condition fitness*/
 	void evaluatingPostConditionsBegin(String className, String methodName); /*SUSHI: Path condition fitness*/
@@ -610,9 +612,9 @@ public interface ExecutionTrace {
 	 * 
 	 * @return a {@link java.util.Map} object.
 	 */
-	public Map<Integer, Double> getPathConditionDistances(); /*SUSHI: Path condition fitness*/
-	public Map<Integer, ArrayList<Object>> getPathConditionFeedbacks(); /*SUSHI: Path condition fitness*/
-	public Map<Integer, Double> getPathConditionRelatedBranchDistance(); /*SUSHI: Path condition fitness*/
+	public Map<PathConditionCoverageGoal, PcFitnessValue> getPathConditionFitnessData(); /*SUSHI: Path condition fitness*/
+	public Map<PathConditionCoverageGoal, ArrayList<Object>> getPathConditionFeedbacks(); /*SUSHI: Path condition fitness*/
+	public Map<PathConditionCoverageGoal, Double> getPathConditionRelatedBranchDistance(); /*SUSHI: Path condition fitness*/
 	/**
 	 * Retrieve the list of traversed lines, wrt the set of relevent lines set in the ExecutionTracer
 	 * 
