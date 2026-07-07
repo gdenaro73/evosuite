@@ -343,7 +343,7 @@ public class PathConditionManager extends MultiCriteriaManager implements Search
 			String testName = Properties.TARGET_CLASS.substring(Properties.TARGET_CLASS.lastIndexOf(".") + 1) + suffix;
 			String testDir = Properties.TEST_DIR;
 
-			suiteWriter.writeTestSuite(testName, testDir, new ArrayList());
+			suiteWriter.writeTestSuite(testName, testDir, new ArrayList<>());
 
 			ClientServices.getInstance().getClientNode().notifyGeneratedTestCase(TestFitnessSerializationUtils.makeSerializableForNonEvosuiteClients(goal), testName);
 			LoggingUtils.getEvoLogger().info("\n\n* EMITTED TEST CASE " + testName + ", FOR GOALS: " + goals + ", " + "\n" + tcToWrite.getTestCase());
