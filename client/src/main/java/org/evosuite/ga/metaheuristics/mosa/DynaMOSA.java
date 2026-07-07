@@ -23,15 +23,23 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.evosuite.Properties.Criterion;
 import org.evosuite.Properties.PathConditionTarget;
+import org.evosuite.TestSuiteGenerator;
 import org.evosuite.coverage.branch.BranchCoverageTestFitness;
 import org.evosuite.coverage.pathcondition.PathConditionCoverageGoalFitness;
 import org.evosuite.ga.metaheuristics.mosa.structural.PathConditionManager;
 import org.evosuite.ga.metaheuristics.mosa.structural.SeepepManager;
+import org.evosuite.ga.metaheuristics.mosa.structural.TestFitnessSerializationUtils;
 import org.evosuite.ga.metaheuristics.mosa.structural.AidingPathConditionManager;
+import org.evosuite.testcase.execution.EvosuiteError;
 import org.evosuite.testcase.execution.ExecutionTracer;
+import org.evosuite.testcase.factories.importing.CodeTestVisitor;
+import org.evosuite.testsuite.AbstractFitnessFactory;
+import org.evosuite.testsuite.TestSuiteChromosome;
+import org.evosuite.testsuite.TestSuiteMinimizer;
 import org.evosuite.utils.ArrayUtil;
 import org.evosuite.Properties;
 import org.evosuite.ga.ChromosomeFactory;
@@ -40,13 +48,20 @@ import org.evosuite.ga.archive.Archive;
 import org.evosuite.ga.comparators.OnlyCrowdingComparator;
 import org.evosuite.ga.metaheuristics.mosa.structural.MultiCriteriaManager;
 import org.evosuite.ga.operators.ranking.CrowdingDistance;
+import org.evosuite.junit.writer.TestSuiteWriter;
+import org.evosuite.rmi.ClientServices;
+import org.evosuite.testcase.TestCase;
 import org.evosuite.testcase.TestChromosome;
 import org.evosuite.testcase.TestFitnessFunction;
 import org.evosuite.utils.LoggingUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 
 /**
@@ -70,6 +85,7 @@ public class DynaMOSA extends AbstractMOSA {
 	protected CrowdingDistance<TestChromosome> distance = new CrowdingDistance<>();
 
 	private int unchangedPopulationIterations = 0; /*SUSHI: Reset*/
+	private int unchangedFitnessIterations = 0; /*Import and export tests*/
 
 	/**
 	 * Constructor based on the abstract class {@link AbstractMOSA}.
@@ -89,6 +105,12 @@ public class DynaMOSA extends AbstractMOSA {
 
 		// Generate offspring, compute their fitness, update the archive and coverage goals.
 		List<TestChromosome> offspringPopulation = this.breedNextGeneration();
+		
+		// At given intervals, poll for new test cases waiting for being injected in the population and do it
+		if (Properties.INJECTED_TESTS_CHECKING_RATE > 0 && 
+				getAge() % Properties.INJECTED_TESTS_CHECKING_RATE == 1) { /*Import and export tests*/
+			addNewlyInjectedTests(offspringPopulation);
+		}	
 
 		// Create the union of parents and offspring
 		List<TestChromosome> union = new ArrayList<>(this.population.size() + offspringPopulation.size());
@@ -152,11 +174,16 @@ public class DynaMOSA extends AbstractMOSA {
 			}
 		}
 
+		if(Properties.NO_CHANGE_ITERATIONS_BEFORE_ASSUMING_STAGNATION > 0) { /*Import and export tests*/
+			boolean someChanges = goodOffsprings > goodCrosoversAtBegin; //TODO: better if we check the global fitness
+			handleStagnation(someChanges); 
+		}
+		
 		if(Properties.NO_CHANGE_ITERATIONS_BEFORE_RESET > 0) { /*SUSHI: Reset*/ 
 			boolean someChanges = goodOffsprings > goodCrosoversAtBegin;
 			handleReset(someChanges); 
 		}
-
+		
 		currentIteration++;
 		
 		// Console output each 50 iterations
@@ -196,6 +223,175 @@ public class DynaMOSA extends AbstractMOSA {
 		logger.debug("Uncovered goals = {}", goalsManager.getUncoveredGoals().size());
 	}
 
+	private void addNewlyInjectedTests(List<TestChromosome> offspringPopulation) { /*Import and export tests*/
+		String retrievedFromMaster = ClientServices.getInstance().getClientNode().retrieveInjectedTestCases();
+		if (retrievedFromMaster != null) { //There exist new tests recently injected
+			String[] pathsToTestClasses = retrievedFromMaster.split(":");
+			LoggingUtils.getEvoLogger().info("\n\n* ITERATION " + getAge() + ", RETRIEVED NEWLY INJECTED TESTS: ");
+			List<TestChromosome> newTests = Arrays.stream(pathsToTestClasses)
+					.map(path -> importTest(path))
+					.flatMap(List::stream)
+					.collect(Collectors.toList());
+			offspringPopulation.addAll(newTests); 
+		} //else LoggingUtils.getEvoLogger().info("\n\n* ITERATION " + getAge() + ", NO NEWLY INJECTED TESTS");
+	}
+
+	private List<TestChromosome> importTest(String pathToTestClass) { /*Import and export tests*/
+		try {
+			List<TestCase> testCases = CodeTestVisitor._I().getTestCases(pathToTestClass);
+			List<TestChromosome> testChromosomes = new ArrayList<>();
+			for (TestCase t: testCases) {
+				TestChromosome individual = new TestChromosome(); 
+				individual.setTestCase(t);
+				testChromosomes.add(individual);
+				LoggingUtils.getEvoLogger().info("Retrieved test case:\n" + individual);
+				fitnessFunctions.forEach(individual::addFitness);
+				calculateFitness(individual);
+			}
+			return testChromosomes;
+		} catch (IOException e) {
+			throw new EvosuiteError(e);	
+			//throw new EvosuiteError("Unexpected error while importing tests from class " + testClassPath + " due to: " + e);
+		} 
+	}
+	
+	private boolean handleStagnation(boolean changed) { /*Import and export tests*/
+		if (changed) unchangedFitnessIterations = 0;
+		else unchangedFitnessIterations++;
+
+		if (goalsManager.getCurrentGoals().isEmpty()) {
+			return false; // search finished
+		}
+
+		if (unchangedFitnessIterations >  Properties.NO_CHANGE_ITERATIONS_BEFORE_ASSUMING_STAGNATION) {
+			unchangedFitnessIterations = 0;
+			
+			/* Alternative solution:
+			 * With this implementation, we minimize the test suite wrt both the covered goals and the
+			 * yet-uncovered goals. Then we associate the yet-uncovered goals with their closer-to-cover test case.
+			 * Currently we prefer the other solution (see below) in which each yet-uncovered goal G is 
+			 * associated with a closer-to-cover test case specifically minimized wrt to goal G only.
+			 * Our hypothesis is that a specifically minimized test case can be more informative for 
+			 * external tools to investigate how to cover the missing goal G.
+			TestSuiteChromosome currentTestSuite = generateSuite().clone();
+			this.rankingFunction.getSubfront(0).forEach(ind -> currentTestSuite.addTest(ind.clone()));
+			TestSuiteMinimizer minimizer = new TestSuiteMinimizer(new AbstractFitnessFactory<TestFitnessFunction>() {
+				@Override
+				public List<TestFitnessFunction> getCoverageGoals() {
+					ArrayList<TestFitnessFunction> goals = new ArrayList<TestFitnessFunction>();
+					goals.addAll(goalsManager.getCoveredGoals());
+					goals.addAll(goalsManager.getCurrentGoals());
+					return goals;
+				}
+			    @Override
+			    public double getFitness(TestSuiteChromosome suite) {
+			        ExecutionTracer.enableTraceCalls();
+			        double covered = 0;
+			        for (TestFitnessFunction goal : getCoverageGoals()) {
+			        	double bestFitnessForGoal = Double.MAX_VALUE;
+			            for (TestChromosome test : suite.getTestChromosomes()) {
+			                if (goal.isCovered(test)) {
+			                	bestFitnessForGoal = 0;
+			                    break;
+			                } else if (goal.getFitness(test) < bestFitnessForGoal) {
+			                	bestFitnessForGoal = goal.getFitness(test);
+			                }
+			            }
+			            covered += 1 - bestFitnessForGoal;
+			        }
+			        ExecutionTracer.disableTraceCalls();
+			        return getCoverageGoals().size() - covered;
+			    }
+			});
+			minimizer.setShallRemoveRedundantTests(false);
+			minimizer.minimize(currentTestSuite, false);
+			
+			Map<TestFitnessFunction, Integer> serializedGoals = new HashMap<>();
+			goalsManager.getCurrentGoals().forEach(g -> {
+				int bestFitnessTestPosition = -1;
+				double bestFitness = Double.MAX_VALUE;
+				int i = 0;
+				for (TestChromosome tc: currentTestSuite.getTestChromosomes()) {
+					double fitness = tc.getFitness(g);
+					if (fitness < bestFitness) {
+						bestFitness = fitness;
+						bestFitnessTestPosition = i;
+					}
+					i++;
+				}
+				if (bestFitnessTestPosition == -1) {
+					throw new EvosuiteError("This should not happen: Uncovered frontier branch goal with no reaching test case");
+				}
+				serializedGoals.put(TestFitnessSerializationUtils.makeSerializableForNonEvosuiteClients(g), bestFitnessTestPosition);
+			}); */
+
+			// Currently preferred solution:
+			// 1. we minimize the current archived test cases wrt the covered goals
+			TestSuiteChromosome currentTestSuite = generateSuite().clone();
+			TestSuiteMinimizer minimizer = new TestSuiteMinimizer(TestSuiteGenerator.getFitnessFactories());
+			minimizer.minimize(currentTestSuite, false);
+
+			// 2. We identify the closer-to-cover test case for each uncovered goal and minimize it
+			Map<TestFitnessFunction, Integer> serializedGoals = new HashMap<>();
+			goalsManager.getCurrentGoals().forEach(g -> {
+				TestChromosome bestTest = null;
+				double bestFitness = Double.MAX_VALUE;
+				for (TestChromosome tc: this.rankingFunction.getSubfront(0)) {
+					double fitness = tc.getFitness(g);
+					if (fitness < bestFitness) {
+						bestFitness = fitness;
+						bestTest = tc;
+					}
+				}
+				if (bestTest == null) {
+					throw new EvosuiteError("This should not happen: Uncovered frontier branch goal with no reaching test case in top front");
+				}
+				TestSuiteChromosome tsuite = new TestSuiteChromosome();
+				tsuite.addTestChromosome(bestTest.clone());
+				TestSuiteMinimizer minimizerForGoal = new TestSuiteMinimizer(new AbstractFitnessFactory<TestFitnessFunction>() {
+					@Override
+					public List<TestFitnessFunction> getCoverageGoals() {
+						ArrayList<TestFitnessFunction> goals = new ArrayList<TestFitnessFunction>();
+						goals.add(g);
+						return goals;
+					}
+				    @Override
+				    public double getFitness(TestSuiteChromosome suite) {
+				        ExecutionTracer.enableTraceCalls();
+				        double fitness = g.getFitness(suite.getTestChromosome(0));
+				        ExecutionTracer.disableTraceCalls();
+				        return fitness;
+				    }
+				});
+				minimizerForGoal.setShallRemoveRedundantTests(false); //target goal is not covered yet, test mis-identified as redundant
+				minimizerForGoal.minimize(tsuite, false); //Set minimizePerTest=false, it keeps the test suite with 1 test only 
+				if (tsuite.size() != 1) {
+					throw new EvosuiteError("\n\n* UNEXPECTED - MINIMIZED TEST SUITE WITH MULTIPLE TESTS: " + tsuite);
+				}
+				currentTestSuite.addTest(tsuite.getTestChromosome(0));
+				serializedGoals.put(TestFitnessSerializationUtils.makeSerializableForNonEvosuiteClients(g), currentTestSuite.size() - 1);
+			});
+	
+			// Write the test suite to file
+			TestSuiteWriter suiteWriter = new TestSuiteWriter();
+			currentTestSuite.getTests().forEach(suiteWriter::insertTest);
+			String testDir = Properties.TEST_DIR;
+			String testName = Properties.TARGET_CLASS.substring(Properties.TARGET_CLASS.lastIndexOf(".") + 1) + "_" + getAge() + "_Test";
+			suiteWriter.writeTestSuite(testName, testDir, new ArrayList<>());
+			String testFile = testDir + (testDir.endsWith(File.separator) ? "" : File.separator) + testName;
+						
+			// Notify external tools
+			ClientServices.getInstance().getClientNode().notifyRequestForExternalTests(serializedGoals, testFile);
+			
+			LoggingUtils.getEvoLogger().info("*******************************");
+			LoggingUtils.getEvoLogger().info("* Likely stagnation at iteration {}, notifying external providers "
+					+ "on current test cases {} and uncovered goals: {}", currentIteration, testFile, goalsManager.getCurrentGoals());
+			LoggingUtils.getEvoLogger().info("******************************* ");
+			
+			return true;
+		}
+		return false;
+	}
 
 	private int resets = 0;
 	private void printInfo(TestChromosome c) {

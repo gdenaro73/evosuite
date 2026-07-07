@@ -35,6 +35,7 @@ import org.evosuite.runtime.sandbox.Sandbox;
 import org.evosuite.setup.DependencyAnalysis;
 import org.evosuite.setup.TestCluster;
 import org.evosuite.statistics.RuntimeVariable;
+import org.evosuite.testcase.TestFitnessFunction;
 import org.evosuite.utils.FileIOUtils;
 import org.evosuite.utils.Listener;
 import org.evosuite.utils.LoggingUtils;
@@ -597,6 +598,26 @@ public class ClientNodeImpl<T extends Chromosome<T>>
 			masterNode.evosuite_notifyDismissedFitnessGoal(goal, iteration, bestValue, updateIterations);
 		} catch (RemoteException e) {
             logger.error(ClientProcess.getPrettyPrintIdentifier() + "Cannot notify dismissed fitness goal " + goal + " to master", e);
+		}
+	}
+
+	@Override
+	public String retrieveInjectedTestCases() {
+		try {
+			return masterNode.evosuite_retrieveInjectedTestCases();
+		} catch (RemoteException e) {
+            logger.error(ClientProcess.getPrettyPrintIdentifier() + "Cannot retrieve injected test cases from master", e);
+            return null;
+		}
+	}
+
+	@Override
+	public void notifyRequestForExternalTests(Map<TestFitnessFunction, Integer> uncoveredGoalTestNum, String currentEvosuiteTestFileName) {
+		// delegate master node to notify this event
+		try {
+			masterNode.evosuite_notifyRequestForExternalTests(uncoveredGoalTestNum, currentEvosuiteTestFileName);
+		} catch (RemoteException e) {
+            logger.error(ClientProcess.getPrettyPrintIdentifier() + "Cannot notify to master the request for external tests " + currentEvosuiteTestFileName + " related to goals " + uncoveredGoalTestNum.keySet(), e);
 		}
 	}
 

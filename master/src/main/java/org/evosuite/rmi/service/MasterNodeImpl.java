@@ -26,6 +26,7 @@ import org.evosuite.ga.Chromosome;
 import org.evosuite.ga.FitnessFunction;
 import org.evosuite.result.TestGenerationResult;
 import org.evosuite.statistics.SearchStatistics;
+import org.evosuite.testcase.TestFitnessFunction;
 import org.evosuite.testcase.execution.EvosuiteError;
 import org.evosuite.statistics.RuntimeVariable;
 import org.evosuite.utils.Listener;
@@ -47,7 +48,7 @@ public class MasterNodeImpl implements MasterNodeRemote, MasterNodeLocal, Evosui
 	private static final Logger logger = LoggerFactory.getLogger(MasterNodeImpl.class);
 
 	private final Registry registry;
-	private final Map<String, ClientNodeRemote> clients;
+	private final Map<String, ClientNodeRemote<?>> clients;
 	private TestListenerRemote testListener = null;
 
 	protected final Collection<Listener<ClientStateInformation>> listeners = Collections.synchronizedList(new ArrayList<>());
@@ -100,9 +101,9 @@ public class MasterNodeImpl implements MasterNodeRemote, MasterNodeLocal, Evosui
 		 * by calling this method
 		 */
 
-		ClientNodeRemote node = null;
+		ClientNodeRemote<?> node = null;
 		try {
-			node = (ClientNodeRemote) registry.lookup(clientRmiIdentifier);
+			node = (ClientNodeRemote<?>) registry.lookup(clientRmiIdentifier);
 		} catch (Exception e) {
 			logger.error("Error when client " + clientRmiIdentifier
 			        + " tries to register to master", e);
@@ -175,7 +176,7 @@ public class MasterNodeImpl implements MasterNodeRemote, MasterNodeLocal, Evosui
 
 	@Override
 	public void cancelAllClients() {
-		for (ClientNodeRemote client : clients.values()) {
+		for (ClientNodeRemote<?> client : clients.values()) {
 			try {
 				LoggingUtils.getEvoLogger().info("Trying to kill client " + client);
 				client.cancelCurrentSearch();
@@ -296,7 +297,7 @@ public class MasterNodeImpl implements MasterNodeRemote, MasterNodeLocal, Evosui
 			}
 			return ret;
 		} catch (Throwable e) {
-            logger.error("Error while trying to retrieve the injected fitness function from master node", e);
+            logger.error("Error while trying to retrieve the injected fitness functions from master node", e);
 			return null;
 		}
 	}
@@ -312,6 +313,47 @@ public class MasterNodeImpl implements MasterNodeRemote, MasterNodeLocal, Evosui
 	public void evosuite_notifyDismissedFitnessGoal(FitnessFunction<?> goal, int iteration, double bestValue, int[] updateIterations) throws RemoteException {
 		if (testListener != null) {
 			testListener.dismissedFitnessGoal(MasterNodeRemote.RMI_SERVICE_NAME, goal, iteration, bestValue, updateIterations);
+		}
+	}
+	
+	private ConcurrentLinkedQueue<String> injectedTestCases = new ConcurrentLinkedQueue<>();
+	
+	@Override
+	public boolean evosuite_injectTestCase(String testClassPath) throws RemoteException {
+		try {
+			synchronized (injectedTestCases) {
+				return injectedTestCases.add(testClassPath);
+			}
+		} catch (Throwable e) {
+            logger.error("Cannot store the injected test case: " + testClassPath, e);
+			return false;
+		}
+	}
+
+	@Override
+	public String evosuite_retrieveInjectedTestCases() throws RemoteException {
+		try {
+			String ret = null;
+			String testClassPath;
+			synchronized (injectedTestCases) {
+				while ((testClassPath = injectedTestCases.poll()) != null) {
+					ret = ret == null ? testClassPath : ret + ":" + testClassPath;
+				}
+			}
+			if (ret != null) {
+				logger.info("Injecting new test cases: " + ret);
+			}
+			return ret;
+		} catch (Throwable e) {
+            logger.error("Error while trying to retrieve the injected test cases from master node", e);
+			return null;
+		}
+	}
+
+	@Override
+	public void evosuite_notifyRequestForExternalTests(Map<TestFitnessFunction, Integer> uncoveredGoalTestNum, String currentEvosuiteTestFileName) throws RemoteException {
+		if (testListener != null) {
+			testListener.requestForExternalTests(MasterNodeRemote.RMI_SERVICE_NAME, uncoveredGoalTestNum, currentEvosuiteTestFileName);
 		}
 	}
 	

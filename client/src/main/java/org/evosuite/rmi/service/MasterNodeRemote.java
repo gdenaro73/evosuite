@@ -24,10 +24,12 @@ import org.evosuite.ga.Chromosome;
 import org.evosuite.ga.FitnessFunction;
 import org.evosuite.result.TestGenerationResult;
 import org.evosuite.statistics.RuntimeVariable;
+import org.evosuite.testcase.TestFitnessFunction;
 
 import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -67,4 +69,8 @@ public interface MasterNodeRemote extends Remote {
     void evosuite_notifyGeneratedTestCase(FitnessFunction<?> goal, String testFileName) throws RemoteException;
 
     void evosuite_notifyDismissedFitnessGoal(FitnessFunction<?> goal, int iteration, double bestValue, int[] updateIterations) throws RemoteException;
+
+    String evosuite_retrieveInjectedTestCases() throws RemoteException;
+    
+    void evosuite_notifyRequestForExternalTests(Map<TestFitnessFunction, Integer> uncoveredGoalTestNum, String currentEvosuiteTestFileName) throws RemoteException;
 }

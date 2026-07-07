@@ -40,7 +40,9 @@ public class SampleTargetProgram {
 				throw new RuntimeException("check failed"); /* This exc is incompatible with the considered precondition */
 			} else if (a < 0) {
 				return -a + b;
-			} else if (a > 100) {
+			} else if (a + b == 1578 + 1234) {
+				return a + b;
+			} else if (a + b == 10001) {
 				return a + b;
 			} else {
 				return a + 2 * b - b;

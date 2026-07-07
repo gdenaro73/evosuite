@@ -31,4 +31,5 @@ import java.rmi.RemoteException;
 public interface EvosuiteRemote extends Remote {
     boolean evosuite_injectFitnessFunction(String classCanonicalName, String methodNameAndDescriptor, String evaluatorName) throws RemoteException;
 
+    boolean evosuite_injectTestCase(String testClassPath) throws RemoteException;
 }

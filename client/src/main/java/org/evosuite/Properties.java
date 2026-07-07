@@ -1611,13 +1611,17 @@ public class Properties {
 	public static String TEST_LISTENER_RMI_IDENTIFIER = null; /*SUSHI: Path condition fitness*/
 
 	/** Constant <code>INJECTED_PATH_CONDITIONS_CHECKING_RATE=""</code> */
-	@Parameter(key = "injected_path_conditions_checking_rate", group = "SUSHI", description = "When using path condition fitness, check if newly path conditions where injected at the evosuite rmi server, at regualar intervals of number of iterations as defined by this parameter. If 0, do not check.")
+	@Parameter(key = "injected_path_conditions_checking_rate", group = "SUSHI", description = "When using path condition fitness, check if newly path conditions were injected at the evosuite rmi server, at regualar intervals of number of iterations as defined by this parameter. If 0, do not check.")
 	public static int INJECTED_PATH_CONDITIONS_CHECKING_RATE = 0; /*SUSHI: Path condition fitness*/
 
 	/** Constant <code>DISMISS_PATH_CONDITIONS_NO_IMPROVE_ITERATIONS=""</code> */
 	@Parameter(key = "dismiss_path_conditions_no_improve_iterations", group = "SUSHI", description = "When using path condition fitness, discard t. If 0, do not check.")
 	public static int DISMISS_PATH_CONDITIONS_NO_IMPROVE_ITERATIONS = 0; /*SUSHI: Path condition fitness*/
 	
+	/** Constant <code>INJECTED_TESTS_CHECKING_RATE=""</code> */
+	@Parameter(key = "injected_tests_checking_rate", group = "SUSHI", description = "Check if newly test cases were injected at the evosuite rmi server, at regualar intervals of number of iterations as defined by this parameter. If 0, do not check.")
+	public static int INJECTED_TESTS_CHECKING_RATE = 0; /*Import and export tests*/
+
 	/** Constant <code>SUSHI_STATISTICS=""</code> */
 	@Parameter(key = "sushi_statistics", group = "SUSHI", description = "Print sushi statistics upon termination")
 	public static boolean SUSHI_STATISTICS = false; /*SUSHI: Statistics*/
@@ -1642,8 +1646,12 @@ public class Properties {
 	public static boolean AVOID_REPLICAS_OF_INDIVIDUALS = false; /*SUSHI: Prevent multiple copies of individuals*/
 
 	/** Constant <code>NO_CHANGE_ITERATIONS_BEFORE_RESET=""</code> */
-	@Parameter(key = "no_change_iterations_before_reset", group = "SUSHI", description = "If no individual changes for these iterations, keep elite and reset the population (0 means never-reset ")
+	@Parameter(key = "no_change_iterations_before_reset", group = "SUSHI", description = "If no individual changes for these iterations, keep elite and reset the population (0 means never-reset)")
 	public static int NO_CHANGE_ITERATIONS_BEFORE_RESET = 0; /*SUSHI: Reset*/
+
+	/** Constant <code>NO_CHANGE_ITERATIONS_BEFORE_ASSUMING_STAGNATION=""</code> */
+	@Parameter(key = "no_change_iterations_before_assuming_stagnation", group = "SUSHI", description = "If fitness remains the same for such an amount of iterations, notify stagnation to external test suppliers (if any)")
+	public static int NO_CHANGE_ITERATIONS_BEFORE_ASSUMING_STAGNATION = 0; /*Import and export tests*/
 
 	/** Constant <code>PATH_CONDITION_EVALUATORS_DIR=""</code> */
 	@Parameter(key = "path_condition_evaluators_dir", group = "SUSHI", description = "A directory to store the evaluators of path-condition fitness functions (aka EvoSuiteWrapper)")

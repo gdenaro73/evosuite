@@ -22,9 +22,10 @@ package org.evosuite.rmi.service;
 
 import java.rmi.Remote;
 import java.rmi.RemoteException;
+import java.util.Map;
 
 import org.evosuite.ga.FitnessFunction;
-
+import org.evosuite.testcase.TestFitnessFunction;
 /**
  * EvoSuite Master Node view in an external applications that runs evosuite.  
  *
@@ -38,5 +39,7 @@ public interface TestListenerRemote extends Remote {
 
     void generatedTest(String evosuiteServerRmiIdentifier, FitnessFunction<?> goal, String testFileName) throws RemoteException;
 
-    void dismissedFitnessGoal(String evosuiteServerRmiIdentifier, FitnessFunction<?> goal, int iteration, double bestValue, int[] updateIterations) throws RemoteException;    
+    void dismissedFitnessGoal(String evosuiteServerRmiIdentifier, FitnessFunction<?> goal, int iteration, double bestValue, int[] updateIterations) throws RemoteException;
+
+	void requestForExternalTests(String rmiServiceName, Map<TestFitnessFunction, Integer> uncoveredGoalTestNum, String currentEvosuiteTestFileName) throws RemoteException;;    
 }

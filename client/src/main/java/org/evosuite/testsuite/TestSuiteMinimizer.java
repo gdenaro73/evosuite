@@ -59,6 +59,7 @@ public class TestSuiteMinimizer {
     private final static Logger logger = LoggerFactory.getLogger(TestSuiteMinimizer.class);
 
     private final List<TestFitnessFactory<?>> testFitnessFactories = new ArrayList<>();
+    private boolean shallRemoveRedundantTests = true;
 
     /**
      * Assume the search has not started until startTime != 0
@@ -80,6 +81,10 @@ public class TestSuiteMinimizer {
         this.testFitnessFactories.addAll(factories);
     }
 
+    public void setShallRemoveRedundantTests(boolean val) {
+    	shallRemoveRedundantTests = val;
+    }
+    
     /**
      * <p>
      * minimize
@@ -395,7 +400,9 @@ public class TestSuiteMinimizer {
         }
 
         this.removeEmptyTestCases(suite);
-        this.removeRedundantTestCases(suite, goals);
+        if (shallRemoveRedundantTests) {
+        	this.removeRedundantTestCases(suite, goals);
+        }
     }
 
     private void removeEmptyTestCases(TestSuiteChromosome suite) {

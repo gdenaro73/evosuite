@@ -22,8 +22,10 @@ package org.evosuite.rmi.service;
 import org.evosuite.ga.Chromosome;
 import org.evosuite.ga.FitnessFunction;
 import org.evosuite.statistics.RuntimeVariable;
+import org.evosuite.testcase.TestFitnessFunction;
 import org.evosuite.utils.Listenable;
 
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -62,4 +64,8 @@ public interface ClientNodeLocal<T extends Chromosome<T>> extends Listenable<Set
     void notifyGeneratedTestCase(FitnessFunction<?> goal, String testFileName);
 
     void notifyDismissedFitnessGoal(FitnessFunction<?> goal, int iteration, double bestValue, int[] updateIterations);
+
+    String retrieveInjectedTestCases();
+
+    void notifyRequestForExternalTests(Map<TestFitnessFunction, Integer> uncoveredGoalTestNum, String currentEvosuiteTestFileName);
 }
