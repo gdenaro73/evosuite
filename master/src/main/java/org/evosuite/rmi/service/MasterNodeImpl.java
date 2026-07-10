@@ -34,6 +34,7 @@ import org.evosuite.utils.LoggingUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.Registry;
@@ -337,7 +338,7 @@ public class MasterNodeImpl implements MasterNodeRemote, MasterNodeLocal, Evosui
 			String testClassPath;
 			synchronized (injectedTestCases) {
 				while ((testClassPath = injectedTestCases.poll()) != null) {
-					ret = ret == null ? testClassPath : ret + ":" + testClassPath;
+					ret = ret == null ? testClassPath : ret + File.pathSeparator + testClassPath;
 				}
 			}
 			if (ret != null) {

@@ -226,7 +226,7 @@ public class DynaMOSA extends AbstractMOSA {
 	private void addNewlyInjectedTests(List<TestChromosome> offspringPopulation) { /*Import and export tests*/
 		String retrievedFromMaster = ClientServices.getInstance().getClientNode().retrieveInjectedTestCases();
 		if (retrievedFromMaster != null) { //There exist new tests recently injected
-			String[] pathsToTestClasses = retrievedFromMaster.split(":");
+			String[] pathsToTestClasses = retrievedFromMaster.split(File.pathSeparator);
 			LoggingUtils.getEvoLogger().info("\n\n* ITERATION " + getAge() + ", RETRIEVED NEWLY INJECTED TESTS: ");
 			List<TestChromosome> newTests = Arrays.stream(pathsToTestClasses)
 					.map(path -> importTest(path))
