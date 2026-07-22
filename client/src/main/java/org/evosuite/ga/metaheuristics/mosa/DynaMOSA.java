@@ -375,7 +375,9 @@ public class DynaMOSA extends AbstractMOSA {
 			// Write the test suite to file
 			TestSuiteWriter suiteWriter = new TestSuiteWriter();
 			currentTestSuite.getTests().forEach(suiteWriter::insertTest);
-			String testDir = Properties.TEST_DIR;
+			String testDir = Properties.TEST_DIR + 
+					(Properties.TEST_DIR.endsWith(File.separator) ? "" : File.separator) + 
+					Properties.TARGET_CLASS.substring(0, Properties.TARGET_CLASS.lastIndexOf(".")).replace(".", File.separator);
 			String testName = Properties.TARGET_CLASS.substring(Properties.TARGET_CLASS.lastIndexOf(".") + 1) + "_" + getAge() + "_Test";
 			suiteWriter.writeTestSuite(testName, testDir, new ArrayList<>());
 			String testFile = testDir + (testDir.endsWith(File.separator) ? "" : File.separator) + testName;
