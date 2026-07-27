@@ -980,9 +980,14 @@ public class TestCodeVisitor extends TestVisitor {
         VariableReference retval = statement.getReturnValue();
         String expression = ((Class<?>) retval.getType()).getSimpleName() + " "
                 + getVariableName(retval) + " = ";
-        expression += getVariableName(statement.getLeftOperand()) + " "
-                + statement.getOperator().toCode() + " "
-                + getVariableName(statement.getRightOperand());
+        if (statement instanceof PrimitiveCastingExpression) {
+        	PrimitiveCastingExpression castStatment = (PrimitiveCastingExpression) statement;
+        	expression += "(" + castStatment.getCastType().getSimpleName() + ")";
+        } else {
+        	expression += getVariableName(statement.getLeftOperand()) + " "
+                + statement.getOperator().toCode();
+        }
+        expression += " " + getVariableName(statement.getRightOperand());
         testCode += expression + ";" + NEWLINE;
         addAssertions(statement);
     }

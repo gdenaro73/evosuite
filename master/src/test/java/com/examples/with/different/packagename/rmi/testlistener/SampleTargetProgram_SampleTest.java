@@ -16,8 +16,8 @@ public class SampleTargetProgram_SampleTest {
 		  int int0 = 1578;
 		  int int1 = 1234;
 	      SampleTargetProgram sampleTargetProgram0 = new SampleTargetProgram(true);
-	      int1 = 1235;
-	      int int2 = sampleTargetProgram0.sum(int0, int1);
+	      long long1 = (((1230 + (long) 5.0) / 4) * (long) 4.0) % (10000 + 20000);
+	      int int2 = sampleTargetProgram0.sum(int0, (int) long1);
 	  }
 
 
