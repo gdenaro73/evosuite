@@ -36,7 +36,7 @@ import org.evosuite.ga.metaheuristics.mosa.structural.TestFitnessSerializationUt
 import org.evosuite.ga.metaheuristics.mosa.structural.AidingPathConditionManager;
 import org.evosuite.testcase.execution.EvosuiteError;
 import org.evosuite.testcase.execution.ExecutionTracer;
-import org.evosuite.testcase.factories.importing.CodeTestVisitor;
+import org.evosuite.testcase.factories.importing.ImportingTestVisitor;
 import org.evosuite.testsuite.AbstractFitnessFactory;
 import org.evosuite.testsuite.TestSuiteChromosome;
 import org.evosuite.testsuite.TestSuiteMinimizer;
@@ -238,7 +238,7 @@ public class DynaMOSA extends AbstractMOSA {
 
 	private List<TestChromosome> importTest(String pathToTestClass) { /*Import and export tests*/
 		try {
-			List<TestCase> testCases = CodeTestVisitor._I().getTestCases(pathToTestClass);
+			List<TestCase> testCases = ImportingTestVisitor._I().getTestCases(pathToTestClass);
 			List<TestChromosome> testChromosomes = new ArrayList<>();
 			for (TestCase t: testCases) {
 				TestChromosome individual = new TestChromosome(); 
@@ -375,12 +375,12 @@ public class DynaMOSA extends AbstractMOSA {
 			// Write the test suite to file
 			TestSuiteWriter suiteWriter = new TestSuiteWriter();
 			currentTestSuite.getTests().forEach(suiteWriter::insertTest);
-			String testDir = Properties.TEST_DIR + 
-					(Properties.TEST_DIR.endsWith(File.separator) ? "" : File.separator) + 
-					Properties.TARGET_CLASS.substring(0, Properties.TARGET_CLASS.lastIndexOf(".")).replace(".", File.separator);
 			String testName = Properties.TARGET_CLASS.substring(Properties.TARGET_CLASS.lastIndexOf(".") + 1) + "_" + getAge() + "_Test";
-			suiteWriter.writeTestSuite(testName, testDir, new ArrayList<>());
-			String testFile = testDir + (testDir.endsWith(File.separator) ? "" : File.separator) + testName;
+			suiteWriter.writeTestSuite(testName, Properties.TEST_DIR, new ArrayList<>());
+			String testFile = Properties.TEST_DIR + 
+					(Properties.TEST_DIR.endsWith(File.separator) ? "" : File.separator) + 
+					Properties.TARGET_CLASS_PREFIX.replace(".", File.separator) + 
+					File.separator + testName;
 						
 			// Notify external tools
 			ClientServices.getInstance().getClientNode().notifyRequestForExternalTests(serializedGoals, testFile);
