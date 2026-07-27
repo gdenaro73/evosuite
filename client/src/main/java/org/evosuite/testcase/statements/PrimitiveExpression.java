@@ -60,7 +60,9 @@ public class PrimitiveExpression extends AbstractStatement {
         AND("&"), //
         OR("|"), //
         CONDITIONAL_AND("&&"), //
-        CONDITIONAL_OR("||");
+        CONDITIONAL_OR("||"),
+        CASTING("(<type>)") //supported in subclass
+        ; 
 
         public static Operator toOperator(String code) {
             for (Operator operator : values()) {
@@ -123,6 +125,229 @@ public class PrimitiveExpression extends AbstractStatement {
         //		return new PrimitiveExpression(newTestCase, retval, leftOperand, operator, rightOperand);
     }
 
+    enum PromotionType {
+    	INT_PROMOTION {
+    		Number PLUS(Number a, Number b) {
+    			return a.intValue() + b.intValue();
+    		}
+    		Number MINUS(Number a, Number b) {
+    			return a.intValue() - b.intValue();
+    		}
+    		Number TIMES(Number a, Number b) {
+    			return a.intValue() * b.intValue();
+    		}
+    		Number DIVIDE(Number a, Number b) {
+    			return a.intValue() / b.intValue();
+    		}
+    		Number REMAINDER(Number a, Number b) {
+    			return a.intValue() % b.intValue();
+    		}
+    		Number AND(Number a, Number b) {
+    			return a.intValue() & b.intValue();
+    		}
+    		Number OR(Number a, Number b) {
+    			return a.intValue() | b.intValue();
+    		}
+    		Number XOR(Number a, Number b) {
+    			return a.intValue() ^ b.intValue();
+    		}
+    		Number LEFT_SHIFT(Number a, Number b) {
+    			return a.intValue() << b.intValue();
+    		}
+    		Number RIGHT_SHIFT_SIGNED(Number a, Number b) {
+    			return a.intValue() >> b.intValue();
+    		}
+    		Number RIGHT_SHIFT_UNSIGNED(Number a, Number b) {
+    			return a.intValue() >>> b.intValue();
+    		}
+			boolean LESS(Number a, Number b) {
+    			return a.intValue() < b.intValue();
+			}
+			boolean GREATER(Number a, Number b) {
+    			return a.intValue() > b.intValue();
+			}
+			boolean LESS_EQUALS(Number a, Number b) {
+    			return a.intValue() <= b.intValue();
+			}
+			boolean GREATER_EQUALS(Number a, Number b) {
+    			return a.intValue() >= b.intValue();
+			}
+    	},
+    	LONG_PROMOTION {
+    		Number PLUS(Number a, Number b) {
+    			return a.longValue() + b.longValue();
+    		}
+    		Number MINUS(Number a, Number b) {
+    			return a.longValue() - b.longValue();
+    		}
+    		Number TIMES(Number a, Number b) {
+    			return a.longValue() * b.longValue();
+    		}
+    		Number DIVIDE(Number a, Number b) {
+    			return a.longValue() / b.longValue();
+    		}
+    		Number REMAINDER(Number a, Number b) {
+    			return a.longValue() % b.longValue();
+    		}
+    		Number AND(Number a, Number b) {
+    			return a.longValue() & b.longValue();
+    		}
+    		Number OR(Number a, Number b) {
+    			return a.longValue() | b.longValue();
+    		}
+    		Number XOR(Number a, Number b) {
+    			return a.longValue() ^ b.longValue();
+    		}
+    		Number LEFT_SHIFT(Number a, Number b) {
+    			return a.longValue() << b.intValue();
+    		}
+    		Number RIGHT_SHIFT_SIGNED(Number a, Number b) {
+    			return a.longValue() >> b.intValue();
+    		}
+    		Number RIGHT_SHIFT_UNSIGNED(Number a, Number b) {
+    			return a.longValue() >>> b.intValue();
+    		}
+			boolean LESS(Number a, Number b) {
+    			return a.longValue() < b.longValue();
+			}
+			boolean GREATER(Number a, Number b) {
+    			return a.longValue() > b.longValue();
+			}
+			boolean LESS_EQUALS(Number a, Number b) {
+    			return a.longValue() <= b.longValue();
+			}
+			boolean GREATER_EQUALS(Number a, Number b) {
+    			return a.longValue() >= b.longValue();
+			}
+    	},
+    	FLOAT_PROMOTION {
+    		Number PLUS(Number a, Number b) {
+    			return a.floatValue() + b.floatValue();
+    		}
+    		Number MINUS(Number a, Number b) {
+    			return a.floatValue() - b.floatValue();
+    		}
+    		Number TIMES(Number a, Number b) {
+    			return a.floatValue() * b.floatValue();
+    		}
+    		Number DIVIDE(Number a, Number b) {
+    			return a.floatValue() / b.floatValue();
+    		}
+    		Number REMAINDER(Number a, Number b) {
+    			return a.floatValue() % b.floatValue();
+    		}
+    		Number AND(Number a, Number b) {
+                throw new UnsupportedOperationException("Binary operator & not supported for floats");
+    		}
+    		Number OR(Number a, Number b) {
+                throw new UnsupportedOperationException("Binary operator | not supported for floats");
+    		}
+    		Number XOR(Number a, Number b) {
+    			throw new UnsupportedOperationException("Binary operator ^ not supported for floats");
+    		}
+    		Number LEFT_SHIFT(Number a, Number b) {
+                throw new UnsupportedOperationException("Binary operator << not supported for floats");
+    		}
+    		Number RIGHT_SHIFT_SIGNED(Number a, Number b) {
+                throw new UnsupportedOperationException("Binary operator >> not supported for floats");
+    		}
+    		Number RIGHT_SHIFT_UNSIGNED(Number a, Number b) {
+                throw new UnsupportedOperationException("Binary operator >>> not supported for floats");
+    		}
+			boolean LESS(Number a, Number b) {
+    			return a.floatValue() < b.floatValue();
+			}
+			boolean GREATER(Number a, Number b) {
+    			return a.floatValue() > b.floatValue();
+			}
+			boolean LESS_EQUALS(Number a, Number b) {
+    			return a.floatValue() <= b.floatValue();
+			}
+			boolean GREATER_EQUALS(Number a, Number b) {
+    			return a.floatValue() >= b.floatValue();
+			}
+    	},
+    	DOUBLE_PROMOTION {
+    		Number PLUS(Number a, Number b) {
+    			return a.doubleValue() + b.doubleValue();
+    		}
+    		Number MINUS(Number a, Number b) {
+    			return a.doubleValue() - b.doubleValue();
+    		}
+    		Number TIMES(Number a, Number b) {
+    			return a.doubleValue() * b.doubleValue();
+    		}
+    		Number DIVIDE(Number a, Number b) {
+    			return a.doubleValue() / b.doubleValue();
+    		}
+    		Number REMAINDER(Number a, Number b) {
+    			return a.doubleValue() % b.doubleValue();
+    		}
+    		Number AND(Number a, Number b) {
+                throw new UnsupportedOperationException("Binary operator & not supported for doubles");
+    		}
+    		Number OR(Number a, Number b) {
+                throw new UnsupportedOperationException("Binary operator | not supported for doubles");
+    		}
+    		Number XOR(Number a, Number b) {
+    			throw new UnsupportedOperationException("Binary operator ^ not supported for doubles");
+    		}
+    		Number LEFT_SHIFT(Number a, Number b) {
+                throw new UnsupportedOperationException("Binary operator << not supported for doubles");
+    		}
+    		Number RIGHT_SHIFT_SIGNED(Number a, Number b) {
+                throw new UnsupportedOperationException("Binary operator >> not supported for doubles");
+    		}
+    		Number RIGHT_SHIFT_UNSIGNED(Number a, Number b) {
+                throw new UnsupportedOperationException("Binary operator >>> not supported for doubles");
+    		}
+			boolean LESS(Number a, Number b) {
+    			return a.doubleValue() < b.doubleValue();
+			}
+			boolean GREATER(Number a, Number b) {
+    			return a.doubleValue() > b.doubleValue();
+			}
+			boolean LESS_EQUALS(Number a, Number b) {
+    			return a.doubleValue() <= b.doubleValue();
+			}
+			boolean GREATER_EQUALS(Number a, Number b) {
+    			return a.doubleValue() >= b.doubleValue();
+			}
+    	};
+		
+    	abstract Number PLUS(Number a, Number b);
+		abstract Number MINUS(Number a, Number b);
+		abstract Number TIMES(Number a, Number b);
+		abstract Number DIVIDE(Number a, Number b);
+		abstract Number REMAINDER(Number a, Number b);
+		abstract Number AND(Number a, Number b);
+		abstract Number OR(Number a, Number b);
+		abstract Number XOR(Number a, Number b);
+		abstract Number LEFT_SHIFT(Number a, Number b);
+		abstract Number RIGHT_SHIFT_SIGNED(Number a, Number b);
+		abstract Number RIGHT_SHIFT_UNSIGNED(Number a, Number b);
+		abstract boolean LESS(Number a, Number b);
+		abstract boolean GREATER(Number a, Number b);
+		abstract boolean LESS_EQUALS(Number a, Number b);
+		abstract boolean GREATER_EQUALS(Number a, Number b);
+
+		public static PromotionType resolve(Object o1, Object o2) {
+			if (!(o1 instanceof Number) || !(o2 instanceof Number)) {
+                throw new UnsupportedOperationException("Binary operator supported only for Numbers, cannot be applied to operators " + o1 + " and " + o2);
+			}
+            if (o1 instanceof Double || o2 instanceof Double) {
+            	return PromotionType.DOUBLE_PROMOTION;
+            } else if (o1 instanceof Float || o2 instanceof Float) {
+            	return PromotionType.FLOAT_PROMOTION;
+            } else if (o1 instanceof Long || o2 instanceof Long) {
+            	return PromotionType.LONG_PROMOTION;
+            } else {
+            	return PromotionType.INT_PROMOTION;
+            }  
+        }
+
+    }
+
     /**
      * {@inheritDoc}
      */
@@ -132,21 +357,87 @@ public class PrimitiveExpression extends AbstractStatement {
         try {
             Object o1 = leftOperand.getObject(scope);
             Object o2 = rightOperand.getObject(scope);
-            switch (operator) {
-                case EQUALS:
-                    if (Objects.equals(o1, o2)) {
-                        scope.setObject(retval, true);
-                    } else {
-                        scope.setObject(retval, false);
-                    }
-                    break;
-                default:
-                    throw new UnsupportedOperationException("Method execute not implemented!");
-            }
+            
+            Object ret;
+        	switch (operator) {
+        	case PLUS:
+            	ret = PromotionType.resolve(o1, o2).PLUS((Number) o1, (Number) o2);
+            	break;
+        	case MINUS:
+            	ret = PromotionType.resolve(o1, o2).MINUS((Number) o1, (Number) o2);
+            	break;
+            case TIMES:
+            	ret = PromotionType.resolve(o1, o2).TIMES((Number) o1, (Number) o2);
+           	break;
+            case DIVIDE:
+            	ret = PromotionType.resolve(o1, o2).DIVIDE((Number) o1, (Number) o2);
+            	break;
+            case REMAINDER:
+            	ret = PromotionType.resolve(o1, o2).REMAINDER((Number) o1, (Number) o2);
+            	break;
+            case AND:
+            	if (o1 instanceof Boolean && o2 instanceof Boolean) {
+            		ret = (boolean) o1 & (boolean) o2;
+            	} else {
+            		ret = PromotionType.resolve(o1, o2).AND((Number) o1, (Number) o2);
+            	}
+            	break;
+            case OR:
+            	if (o1 instanceof Boolean && o2 instanceof Boolean) {
+            		ret = (boolean) o1 | (boolean) o2;
+            	} else {
+            		ret = PromotionType.resolve(o1, o2).OR((Number) o1, (Number) o2);
+            	}
+            	break;
+            case XOR:
+            	if (o1 instanceof Boolean && o2 instanceof Boolean) {
+            		ret = (boolean) o1 ^ (boolean) o2;
+            	} else {
+            		ret = PromotionType.resolve(o1, o2).XOR((Number) o1, (Number) o2);
+            	}
+            	break;
+            case LEFT_SHIFT:
+            	ret = PromotionType.resolve(o1, o2).LEFT_SHIFT((Number) o1, (Number) o2);
+            	break;
+            case RIGHT_SHIFT_SIGNED:
+            	ret = PromotionType.resolve(o1, o2).RIGHT_SHIFT_SIGNED((Number) o1, (Number) o2);
+            	break;
+            case RIGHT_SHIFT_UNSIGNED:
+            	ret = PromotionType.resolve(o1, o2).RIGHT_SHIFT_UNSIGNED((Number) o1, (Number) o2);
+            	break;
+            case LESS:
+            	ret = PromotionType.resolve(o1, o2).LESS((Number) o1, (Number) o2);
+            	break;
+            case GREATER:
+            	ret = PromotionType.resolve(o1, o2).GREATER((Number) o1, (Number) o2);
+            	break;
+            case LESS_EQUALS:
+            	ret = PromotionType.resolve(o1, o2).LESS_EQUALS((Number) o1, (Number) o2);
+            	break;
+            case GREATER_EQUALS:
+            	ret = PromotionType.resolve(o1, o2).GREATER_EQUALS((Number) o1, (Number) o2);
+            	break;
+            case EQUALS:
+            	ret = Objects.equals(o1, o2);
+            	break;
+            case NOT_EQUALS:
+            	ret = !Objects.equals(o1, o2);
+            	break;
+            case CONDITIONAL_AND:
+            	ret = (boolean) o1 && (boolean) o2;
+            	break;
+            case CONDITIONAL_OR:
+            	ret = (boolean) o1 || (boolean) o2;
+            	break;
+            default:
+                throw new UnsupportedOperationException("Binary operator not supported: " + operator);
+        	}
+   
+        	scope.setObject(retval, ret);                	
+            return null;
         } catch (CodeUnderTestException e) {
             return e;
         }
-        return null;
     }
 
     /**
