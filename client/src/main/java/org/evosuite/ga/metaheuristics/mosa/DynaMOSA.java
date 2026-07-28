@@ -377,10 +377,11 @@ public class DynaMOSA extends AbstractMOSA {
 			currentTestSuite.getTests().forEach(suiteWriter::insertTest);
 			String testName = Properties.TARGET_CLASS.substring(Properties.TARGET_CLASS.lastIndexOf(".") + 1) + "_" + getAge() + "_Test";
 			suiteWriter.writeTestSuite(testName, Properties.TEST_DIR, new ArrayList<>());
-			String testFile = Properties.TEST_DIR + 
-					(Properties.TEST_DIR.endsWith(File.separator) ? "" : File.separator) + 
-					Properties.TARGET_CLASS_PREFIX.replace(".", File.separator) + 
-					File.separator + testName;
+			String testFile = Properties.TEST_DIR + (Properties.TEST_DIR.endsWith(File.separator) ? "" : File.separator);
+			testFile += (testFile.endsWith(File.separator) ? "" : File.separator);
+			testFile += Properties.CLASS_PREFIX.replace(".", File.separator);
+			testFile += (testFile.endsWith(File.separator) ? "" : File.separator);
+			testFile += testName + ".java";
 						
 			// Notify external tools
 			ClientServices.getInstance().getClientNode().notifyRequestForExternalTests(serializedGoals, testFile);
