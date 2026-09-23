@@ -27,6 +27,7 @@ import java.util.stream.Collectors;
 
 import org.evosuite.Properties.Criterion;
 import org.evosuite.Properties.PathConditionTarget;
+import org.evosuite.TestGenerationContext;
 import org.evosuite.TestSuiteGenerator;
 import org.evosuite.coverage.branch.BranchCoverageTestFitness;
 import org.evosuite.coverage.pathcondition.PathConditionCoverageGoalFitness;
@@ -36,7 +37,8 @@ import org.evosuite.ga.metaheuristics.mosa.structural.TestFitnessSerializationUt
 import org.evosuite.ga.metaheuristics.mosa.structural.AidingPathConditionManager;
 import org.evosuite.testcase.execution.EvosuiteError;
 import org.evosuite.testcase.execution.ExecutionTracer;
-import org.evosuite.testcase.factories.importing.ImportingTestVisitor;
+import org.evosuite.testcase.factories.importing.JUnitToEvosuiteImporter;
+import org.evosuite.testcase.factories.importing.JUnitToEvosuiteImporter.TestImportException;
 import org.evosuite.testsuite.AbstractFitnessFactory;
 import org.evosuite.testsuite.TestSuiteChromosome;
 import org.evosuite.testsuite.TestSuiteMinimizer;
@@ -238,7 +240,10 @@ public class DynaMOSA extends AbstractMOSA {
 
 	private List<TestChromosome> importTest(String pathToTestClass) { /*Import and export tests*/
 		try {
-			List<TestCase> testCases = ImportingTestVisitor._I().getTestCases(pathToTestClass);
+			JUnitToEvosuiteImporter importer = 
+					new JUnitToEvosuiteImporter(TestGenerationContext.getInstance().getClassLoaderForSUT());
+			importer.importTestCases(pathToTestClass);
+			List<TestCase> testCases = importer.getTestCases();
 			List<TestChromosome> testChromosomes = new ArrayList<>();
 			for (TestCase t: testCases) {
 				TestChromosome individual = new TestChromosome(); 
@@ -249,9 +254,11 @@ public class DynaMOSA extends AbstractMOSA {
 				calculateFitness(individual);
 			}
 			return testChromosomes;
+		} catch (TestImportException e) {
+			throw new EvosuiteError("Parsing issue while importing tests from class " + pathToTestClass + " due to: " + e +
+					"\n Parser reported that: " + e.getParsingIssueReport());
 		} catch (IOException e) {
-			throw new EvosuiteError(e);	
-			//throw new EvosuiteError("Unexpected error while importing tests from class " + testClassPath + " due to: " + e);
+			throw new EvosuiteError("I/O issue while importing tests from class " + pathToTestClass + " due to: " + e);
 		} 
 	}
 	

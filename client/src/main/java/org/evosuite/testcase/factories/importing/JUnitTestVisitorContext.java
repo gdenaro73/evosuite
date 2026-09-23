@@ -3,14 +3,12 @@ package org.evosuite.testcase.factories.importing;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import org.evosuite.symbolic.TestCaseBuilder;
-import org.evosuite.testcase.TestCase;
 import org.evosuite.testcase.variable.VariableReference;
 
 import com.github.javaparser.ast.expr.Expression;
 import com.github.javaparser.resolution.types.ResolvedType;
 
-public class ImportingTestVisitorContext {
+class JUnitTestVisitorContext {
 	private class ImportingTestVisitorProtocolException extends RuntimeException {
 		private static final long serialVersionUID = 1L;
 		public ImportingTestVisitorProtocolException(String message) {
@@ -19,10 +17,7 @@ public class ImportingTestVisitorContext {
 	}
 
 	private boolean enabled = false;
-	private TestCaseBuilder builder = null;
 	private HashMap<String, VariableReference> tracker = null;
-	private List<TestCase> evoSuiteTestCases = new ArrayList<>();
-
 	private int enabledExprVisitIndex = -1;
 	private List<Expression> expressions = new ArrayList<>();
 	private List<ResolvedType> typeInCaseOfNullLiterals = new ArrayList<>();
@@ -123,22 +118,6 @@ public class ImportingTestVisitorContext {
 					newlyAddedReference.get(enabledExprVisitIndex) + " -- Cannot now re-set as " + vr);
 		}
 		newlyAddedReference.set(enabledExprVisitIndex, vr);
-	}
-
-	public void add(TestCase tc) {
-		this.evoSuiteTestCases.add(tc);
-	}
-
-	public List<TestCase> getTestCases() {
-		return this.evoSuiteTestCases;
-	}
-
-	public TestCaseBuilder getBuilder() {
-		return builder;
-	}
-
-	public void setBuilder(TestCaseBuilder builder) {
-		this.builder = builder;
 	}
 
 	public HashMap<String, VariableReference> getTracker() {
