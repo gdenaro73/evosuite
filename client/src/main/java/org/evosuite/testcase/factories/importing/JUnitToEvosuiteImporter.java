@@ -172,16 +172,16 @@ public class JUnitToEvosuiteImporter {
 			}
 		}
 		
-		public String getUnparsableCode() {
-			return unparsableCode;
+		public String[] getSuccessfullyParsedTests() {
+			return successfullyParsedTests.toArray(new String[0]);
 		}
-		
+
 		public String getPartiallyParsedCode() {
 			return partiallyParsedCode;
 		}
 		
-		public String[] getSuccessfullyParsedTests() {
-			return successfullyParsedTests.toArray(new String[0]);
+		public String getUnparsableCode() {
+			return unparsableCode;
 		}
 
 		public String getIssue() {

@@ -79,7 +79,7 @@ public class SampleTargetProgram_SampleTest {
   @Test(timeout = 4000)
   public void test08()  throws Throwable  {
       SampleTargetProgram sampleTargetProgram0 = new SampleTargetProgram(true);
-      int int0 = sampleTargetProgram0.otsher((-4481), (-4481));
+      int int0 = sampleTargetProgram0.other((-4481), (-4481));
   }
 
   @Test(timeout = 4000)
