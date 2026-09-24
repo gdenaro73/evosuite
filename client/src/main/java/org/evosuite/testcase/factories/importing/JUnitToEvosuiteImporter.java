@@ -85,8 +85,8 @@ public class JUnitToEvosuiteImporter {
 		StaticJavaParser.setConfiguration(parserConfiguration);		
 	}
 
-	public JUnitToEvosuiteImporter(String classpath) throws MalformedURLException { 
-		this(asClassLoader(classpath));
+	public JUnitToEvosuiteImporter(String classpathForSUT) throws MalformedURLException { 
+		this(asClassLoader(classpathForSUT));
 	}
 	
 	private static ClassLoader asClassLoader(String classpath) throws MalformedURLException {
@@ -102,9 +102,9 @@ public class JUnitToEvosuiteImporter {
 		return new URLClassLoader(urls, ClassLoader.getSystemClassLoader());
 	}
 
-	public void importTestCases(String testClassPath) throws IOException {
+	public void importTestCases(String testClassFile) throws TestImportException, IOException {
 		try {
-			CompilationUnit cu = StaticJavaParser.parse(Files.newInputStream(Paths.get(testClassPath)));
+			CompilationUnit cu = StaticJavaParser.parse(Files.newInputStream(Paths.get(testClassFile)));
 			new JUnitTestVisitor().visit(cu, new JUnitTestVisitorContext());
 		} catch (Throwable e) {
 			LoggingUtils.getEvoLogger().info("\n\n* Issue while importing test case: " + e + " ::: " + Arrays.toString(e.getStackTrace()));
@@ -148,12 +148,12 @@ public class JUnitToEvosuiteImporter {
 		private String partiallyParsedCode = null;
 		private String unparsableCode = null;
 		
-		public TestImportException(Node currentNode, String msg) {
+		TestImportException(Node currentNode, String msg) {
 			super(msg);
 			setLocalData(currentNode);
 		}
 		
-		public TestImportException(Node currentNode, String msg, Throwable cause) {
+		TestImportException(Node currentNode, String msg, Throwable cause) {
 			super(msg, cause);
 			setLocalData(currentNode);
 		}
