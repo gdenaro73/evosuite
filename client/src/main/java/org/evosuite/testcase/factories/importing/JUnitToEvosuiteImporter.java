@@ -85,6 +85,23 @@ public class JUnitToEvosuiteImporter {
 		StaticJavaParser.setConfiguration(parserConfiguration);		
 	}
 
+	public JUnitToEvosuiteImporter(String classpath) throws MalformedURLException { 
+		this(asClassLoader(classpath));
+	}
+	
+	private static ClassLoader asClassLoader(String classpath) throws MalformedURLException {
+		String[] entries = classpath.split(File.pathSeparator);
+		URL[] urls = new URL[entries.length];
+		for (int i = 0; i < entries.length; ++i) { 
+			String entry = entries[i];
+			if (!entry.endsWith("jar") && !entry.endsWith(File.separator)) {
+				entry += File.separator; //URL folders must be terminated with file separator
+			}
+			urls[i] = new URL("file:" + entry);
+		}
+		return new URLClassLoader(urls, ClassLoader.getSystemClassLoader());
+	}
+
 	public void importTestCases(String testClassPath) throws IOException {
 		try {
 			CompilationUnit cu = StaticJavaParser.parse(Files.newInputStream(Paths.get(testClassPath)));
@@ -103,84 +120,13 @@ public class JUnitToEvosuiteImporter {
 		testCases.clear();
 	}
 
-	public class TestImportException extends RuntimeException {
-		private static final long serialVersionUID = 1L;
-		private List<String> alreadyParsed = null;
-		private String partiallyParsed = null;
-		private String unparsable = null;
-		
-		public TestImportException(Node currentlyParsedNode, String message) {
-			super(message);
-			setLocalData(currentlyParsedNode);
-		}
-		public TestImportException(Node currentlyParsedNode, String message, Throwable cause) {
-			super(message, cause);
-			setLocalData(currentlyParsedNode);
-		}
-		private void setLocalData(Node currentlyParsedNode) {
-			unparsable = currentlyParsedNode != null ? currentlyParsedNode.toString() : "";
-			List<TestCase> tests = getTestCases();
-			alreadyParsed = new ArrayList<String>();
-			for (TestCase t: tests) {
-				alreadyParsed.add(t.toCode());
-			}
-			if (testBuilder != null && !testBuilder.getDefaultTestCase().isEmpty()) {
-				partiallyParsed = testBuilder.getDefaultTestCase().toCode();
-			} else {
-				partiallyParsed = "";
-			}
-		}
-		public String getUnparsable() {
-			return unparsable;
-		}
-		public String getPartiallyParsed() {
-			return partiallyParsed;
-		}
-		public String[] getAlreadyParsed() {
-			return alreadyParsed.toArray(new String[0]);
-		}
-		public String getParsingIssueReport() {
-			String report = "Parsing issue report:\n";
-			for (String t: alreadyParsed) {
-				report += "Successfully parsed test case\n---------\n" + t + "---------\n";
-			}
-			report += "Now parsing\n---------\n";
-			report += partiallyParsed + "\n";
-			report += "Issue with statement: " + unparsable + "\n" ;
-			Set<Throwable> done = new HashSet<>();
-			report += getMessage();
-			done.add(this);
-			Throwable exc = getCause();
-			while (exc != null && !done.contains(exc)) {
-				done.add(exc);
-				report += ", due to " + exc.getClass().getSimpleName() + " " + exc.getMessage();
-				exc = exc.getCause();
-			}
-			report += "\n";
-			return report;
-		}
-	}
-
-	public static void main(String[] args) {
-		// Extract classpath entries from args[0] and test-case paths from the subsequent args[i>0]
-		String classpathEntries = args[0]; // path-separator separated list
-		String[] entries = classpathEntries.split(File.pathSeparator);
-		URL[] urls = new URL[entries.length];
-		for (int i = 0; i < entries.length; ++i) { 
-			String entry = entries[i];
-			if (!entry.endsWith("jar") && entry.endsWith(File.separator)) {
-				entry += File.separator; //URL folders must be terminated with file separator
-			}
-			try {
-				urls[i] = new URL("file:" + entry);
-			} catch (MalformedURLException e) {
-				throw new RuntimeException(e);
-			}
-		}
-		
-		JUnitToEvosuiteImporter importer = new JUnitToEvosuiteImporter(new URLClassLoader(urls, ClassLoader.getSystemClassLoader()));
-
-		for (String pathToTestClass: args) {
+	/**
+	 *  Extract classpath entries from args[0] and test-case paths from the subsequent args[i>0]
+	 */
+	public static void main(String[] args) throws Exception {
+		JUnitToEvosuiteImporter importer = new JUnitToEvosuiteImporter(args[0]);
+		for (int i = 0; i < args.length; i++) {
+			String pathToTestClass = args[i];
 			try {
 				importer.importTestCases(pathToTestClass);
 				List<TestCase> testCases = importer.getTestCases();
@@ -190,10 +136,81 @@ public class JUnitToEvosuiteImporter {
 				importer.clearTestCases();
 			} catch (TestImportException e) {
 				System.err.println("Importing issue with " + pathToTestClass + " : " + e.getMessage() + "\n" + e.getParsingIssueReport());
-				e.printStackTrace();
 			} catch (IOException e) {
-				System.err.println("I/O issue with " + pathToTestClass);
+				e.printStackTrace();
 			} 
+		}
+	}
+
+	public class TestImportException extends RuntimeException {
+		private static final long serialVersionUID = 1L;
+		private List<String> successfullyParsedTests = null;
+		private String partiallyParsedCode = null;
+		private String unparsableCode = null;
+		
+		public TestImportException(Node currentNode, String msg) {
+			super(msg);
+			setLocalData(currentNode);
+		}
+		
+		public TestImportException(Node currentNode, String msg, Throwable cause) {
+			super(msg, cause);
+			setLocalData(currentNode);
+		}
+		
+		private void setLocalData(Node currentlyParsedNode) {
+			unparsableCode = currentlyParsedNode != null ? currentlyParsedNode.toString() : "";
+			List<TestCase> tests = getTestCases();
+			successfullyParsedTests = new ArrayList<String>();
+			for (TestCase t: tests) {
+				successfullyParsedTests.add(t.toCode());
+			}
+			if (testBuilder != null && !testBuilder.getDefaultTestCase().isEmpty()) {
+				partiallyParsedCode = testBuilder.getDefaultTestCase().toCode();
+			} else {
+				partiallyParsedCode = "";
+			}
+		}
+		
+		public String getUnparsableCode() {
+			return unparsableCode;
+		}
+		
+		public String getPartiallyParsedCode() {
+			return partiallyParsedCode;
+		}
+		
+		public String[] getSuccessfullyParsedTests() {
+			return successfullyParsedTests.toArray(new String[0]);
+		}
+
+		public String getIssue() {
+			String issue = this.getMessage();
+			Set<Throwable> causes = new HashSet<>();
+			causes.add(this);
+			Throwable cause = getCause();
+			while (cause != null && !causes.contains(cause)) {
+				issue += "; due to " + cause.getClass().getSimpleName() + " " + cause.getMessage();
+				causes.add(cause);
+				cause = cause.getCause();
+			}
+			issue += "\n";
+			return issue;
+		}
+
+		public String getParsingIssueReport() {
+			String report = "Evosuite parser's issue report:\n";
+			for (String t: successfullyParsedTests) {
+				report += "Successfully parsed test\n";
+				report += "---------\n";
+				report += t;
+				report += "---------\n";
+			}
+			report += "Test code with issue\n---------\n";
+			report += partiallyParsedCode;
+			report += "Issue while parsing: " + unparsableCode + "\n" ;
+			report += "--> due to " + getIssue();
+			return report;
 		}
 	}
 
